@@ -20,6 +20,7 @@
     { "source": "/api/trialist", "destination": "/api/trialist.js" },
     { "source": "/api/phv",      "destination": "/api/phv.js" },
     { "source": "/api/rpm",      "destination": "/api/rpm.js" },
-    { "source": "/api/medical",  "destination": "/api/phv.js?type=medical" }
+    { "source": "/api/medical",  "destination": "/api/phv.js?type=medical" },
+    { "source": "/api/playercards", "destination": "/api/phv.js?type=cards" }
   ]
 }

@@ -111,6 +111,44 @@ tr:last-child td{border-bottom:none}
 .age-pill{background:#fff;border:1px solid var(--border);color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;padding:4px 9px;border-radius:3px;cursor:pointer;transition:all .12s;letter-spacing:.3px;white-space:nowrap}
 .age-pill.active{background:var(--red);border-color:var(--red);color:#fff}
 .age-pill:hover:not(.active){border-color:var(--red);color:var(--red)}
+
+/* ── PLAYER CARD ─────────────────────────────────────────────── */
+:root{--pc-clip: polygon(
+    5% 2%, 10% 0%, 90% 0%, 95% 2%,
+    100% 8%, 100% 90%,
+    85% 96%, 50% 100%, 15% 96%,
+    0% 90%, 0% 8%
+  );}
+.pc-outer{display:flex;flex-direction:column;align-items:center;padding:20px 0 40px}
+.pc-shield{position:relative;width:400px;height:630px;flex-shrink:0;background:radial-gradient(circle at 75% 15%, rgba(255,60,60,.35) 0%, rgba(255,60,60,0) 35%),linear-gradient(160deg, #2a0303 0%, #1a0101 45%, #0d0000 100%);clip-path:var(--pc-clip);box-shadow:0 0 0 3px #4a0808,0 20px 40px rgba(0,0,0,.4);color:#fff;overflow:hidden}
+.pc-border{position:absolute;inset:8px;clip-path:var(--pc-clip);border:1px solid rgba(255,255,255,.25);pointer-events:none}
+.pc-sparkle{position:absolute;inset:0;background-image:radial-gradient(2px 2px at 20% 20%, rgba(255,255,255,.5) 0%, transparent 60%),radial-gradient(1.5px 1.5px at 80% 10%, rgba(255,255,255,.4) 0%, transparent 60%),radial-gradient(2px 2px at 90% 40%, rgba(255,255,255,.35) 0%, transparent 60%),radial-gradient(1.5px 1.5px at 15% 60%, rgba(255,255,255,.3) 0%, transparent 60%),radial-gradient(1.5px 1.5px at 70% 25%, rgba(255,255,255,.3) 0%, transparent 60%);pointer-events:none}
+.pc-badge{position:absolute;top:16px;left:50%;transform:translateX(-50%);background:#0a0a0a;border:1px solid rgba(255,255,255,.3);border-radius:4px;padding:4px 10px;font-family:var(--font);font-size:11px;font-weight:800;letter-spacing:1px;color:#fff;display:flex;align-items:center;gap:4px;z-index:3}
+.pc-badge b{color:var(--red)}
+.pc-action{position:absolute;top:64px;right:-18px;width:150px;height:190px;object-fit:cover;object-position:top;opacity:.85;mask-image:linear-gradient(to left, black 40%, transparent 92%),linear-gradient(to bottom, black 55%, transparent 100%);mask-composite:intersect;-webkit-mask-image:linear-gradient(to left, black 40%, transparent 92%),linear-gradient(to bottom, black 55%, transparent 100%);-webkit-mask-composite:source-in;background:#2a2015;z-index:1}
+.pc-overall{position:absolute;top:56px;left:18px;font-family:var(--font);font-size:52px;font-weight:800;line-height:.85;text-shadow:0 2px 8px rgba(0,0,0,.5);z-index:3}
+.pc-pos{position:absolute;top:116px;left:20px;z-index:3}
+.pc-crest{position:absolute;top:176px;left:18px;width:52px;height:52px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:3}
+.pc-crest img{width:46px;height:46px;border-radius:50%;object-fit:cover}
+.pc-portrait{position:absolute;top:64px;left:50%;transform:translateX(-38%);width:230px;height:320px;object-fit:cover;object-position:top;mask-image:linear-gradient(to bottom, black 78%, transparent 100%);-webkit-mask-image:linear-gradient(to bottom, black 78%, transparent 100%);background:#ccc;z-index:2}
+.pc-tagline{position:absolute;top:262px;left:18px;width:130px;font-family:var(--font);font-size:15px;font-weight:700;font-style:italic;line-height:1.15;color:#fff;text-transform:uppercase;z-index:3}
+.pc-namewrap{position:absolute;top:398px;left:0;right:0;text-align:center;z-index:3}
+.pc-name{font-family:var(--font);font-size:30px;font-weight:800;letter-spacing:1px;text-transform:uppercase;text-shadow:0 2px 6px rgba(0,0,0,.5)}
+.pc-club{font-family:var(--font);font-size:12px;font-weight:700;letter-spacing:2px;color:#ff4444;margin-top:2px}
+.pc-divider{width:80%;margin:9px auto 0;height:2px;background:linear-gradient(to right, transparent, rgba(255,70,70,.9), transparent)}
+.pc-stats{position:absolute;top:460px;left:0;right:0;display:flex;padding:0 14px;z-index:3}
+.pc-stat{flex:1;text-align:center;padding:0 2px;border-right:1px solid rgba(255,255,255,.12)}
+.pc-stat:last-child{border-right:none}
+.pc-stat-icon{width:20px;height:20px;margin:0 auto 3px;color:#ddd}
+.pc-stat-label{font-family:var(--font);font-size:8px;font-weight:700;letter-spacing:.5px;color:#bbb;text-transform:uppercase;line-height:1.1;height:18px;display:flex;align-items:center;justify-content:center}
+.pc-stat-val{font-family:var(--font);font-size:19px;font-weight:800;color:#fff;margin-top:2px}
+.pc-infobar{position:absolute;top:538px;left:14px;right:14px;background:rgba(120,0,0,.55);border-top:1px solid rgba(255,255,255,.15);border-bottom:1px solid rgba(255,255,255,.15);display:flex;padding:8px 4px;z-index:3}
+.pc-info{flex:1;display:flex;align-items:center;gap:6px;justify-content:center}
+.pc-info-icon{width:16px;height:16px;flex-shrink:0;color:#fff}
+.pc-info-text{line-height:1.1}
+.pc-info-label{font-family:var(--font);font-size:7px;font-weight:700;letter-spacing:.4px;color:#ffb0b0;text-transform:uppercase}
+.pc-info-val{font-family:var(--font);font-size:12px;font-weight:800;color:#fff}
+.pc-flag{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:22px;line-height:1;z-index:3}
 </style>
 </head>
 <body>
@@ -146,6 +184,7 @@ tr:last-child td{border-bottom:none}
   <div class="nav-tab" data-p="rank">Rankings</div>
   <div class="nav-tab" data-p="playercompare">Player Compare</div>
   <div class="nav-tab" data-p="trialist">Trialist</div>
+  <div class="nav-tab" data-p="playercard">Player Card</div>
 </div>
 <div class="nav" data-section-group="medical" style="display:none">
   <div class="nav-tab" data-p="phv">Growth &amp; Maturation</div>
@@ -518,6 +557,85 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<!-- PLAYER CARD -->
+<div class="page" id="page-playercard">
+  <div class="main">
+    <div class="ctrl-row">
+      <span class="cl">Player:</span>
+      <select class="ctrl" id="pc-player" onchange="renderPlayerCard()" style="min-width:220px"></select>
+      <button class="export-btn" onclick="exportPDF('page-playercard')" style="margin-left:auto">⬇ Export PDF</button>
+    </div>
+    <div id="pc-empty" style="background:#fff;border:1px solid var(--border);padding:40px 20px;text-align:center;color:var(--text3);display:none">
+      <div style="font-family:var(--font);font-size:22px;font-weight:800;margin-bottom:6px;color:#ccc">NO CARDS YET</div>
+      <div style="font-size:13px">Add rows to the "PlayerCards" sheet tab to populate this page.</div>
+    </div>
+    <div class="pc-outer" id="pc-outer">
+      <div class="pc-shield">
+        <div class="pc-sparkle"></div>
+        <div class="pc-border"></div>
+        <div class="pc-badge">MLS <b>NEXT</b></div>
+        <img class="pc-action" id="pc-img-action" alt="" onerror="this.style.opacity=0"/>
+        <div class="pc-overall" id="pc-overall">—</div>
+        <div class="pc-pos" id="pc-pos">—</div>
+        <div class="pc-crest"><img id="pc-crest-img" alt="RBNY" style="width:46px;height:46px;border-radius:50%;object-fit:cover"/></div>
+        <img class="pc-portrait" id="pc-img-portrait" alt="" onerror="this.style.opacity=0"/>
+        <div class="pc-tagline">Intensity is<br/>Our Identity</div>
+        <div class="pc-namewrap">
+          <div class="pc-name" id="pc-name">—</div>
+          <div class="pc-club">New York Red Bulls</div>
+          <div class="pc-divider"></div>
+        </div>
+        <div class="pc-stats">
+          <div class="pc-stat">
+            <svg class="pc-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18 L10 11 L14 15 L20 6"/><path d="M15 6 L20 6 L20 11"/></svg>
+            <div class="pc-stat-label">Agile</div>
+            <div class="pc-stat-val" id="pc-stat-agile">—</div>
+          </div>
+          <div class="pc-stat">
+            <svg class="pc-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8 L14 8"/><path d="M3 13 L18 13"/><path d="M3 18 L11 18"/></svg>
+            <div class="pc-stat-label">Fast</div>
+            <div class="pc-stat-val" id="pc-stat-fast">—</div>
+          </div>
+          <div class="pc-stat">
+            <svg class="pc-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="4" height="6" rx="1"/><rect x="18" y="9" width="4" height="6" rx="1"/><path d="M6 12 L18 12"/></svg>
+            <div class="pc-stat-label">Strong</div>
+            <div class="pc-stat-val" id="pc-stat-strong">—</div>
+          </div>
+          <div class="pc-stat">
+            <svg class="pc-stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L20 7 V12 C20 17 16.5 20.5 12 22 C7.5 20.5 4 17 4 12 V7 Z"/></svg>
+            <div class="pc-stat-label">Durable Resilient</div>
+            <div class="pc-stat-val" id="pc-stat-durable">—</div>
+          </div>
+          <div class="pc-stat">
+            <svg class="pc-stat-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2 L4 14 H11 L9 22 L20 9 H13 Z"/></svg>
+            <div class="pc-stat-label">Powerful Explosive</div>
+            <div class="pc-stat-val" id="pc-stat-powerful">—</div>
+          </div>
+        </div>
+        <div class="pc-infobar">
+          <div class="pc-info">
+            <svg class="pc-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10 H21"/><path d="M8 3 V7"/><path d="M16 3 V7"/></svg>
+            <div class="pc-info-text"><div class="pc-info-label">Born</div><div class="pc-info-val" id="pc-info-born">—</div></div>
+          </div>
+          <div class="pc-info">
+            <svg class="pc-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 V21"/><path d="M9 6 L12 3 L15 6"/><path d="M9 18 L12 21 L15 18"/></svg>
+            <div class="pc-info-text"><div class="pc-info-label">Height</div><div class="pc-info-val" id="pc-info-height">—</div></div>
+          </div>
+          <div class="pc-info">
+            <svg class="pc-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+            <div class="pc-info-text"><div class="pc-info-label">Weight</div><div class="pc-info-val" id="pc-info-weight">—</div></div>
+          </div>
+          <div class="pc-info">
+            <svg class="pc-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="1"/><path d="M12 4 V20"/><circle cx="12" cy="12" r="3.5"/></svg>
+            <div class="pc-info-text"><div class="pc-info-label">Position</div><div class="pc-info-val" id="pc-info-position">—</div></div>
+          </div>
+        </div>
+        <div class="pc-flag" id="pc-flag">🏳️</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MD+/- -->
 <div class="page" id="page-mdpm">
   <div class="main">
@@ -840,6 +958,7 @@ let TRIALIST_CMJ={},TRIALIST_MS={};
 let PHV_DATA={};
 let RPM={};
 let MEDICAL_DATA={};
+let PLAYER_CARDS={};
 
 // ── ISO WEEK HELPERS ──────────────────────────────────────────────
 // Returns "YYYY-Www" ISO week key for a given Date object.
@@ -931,7 +1050,7 @@ function hideLoader(){document.getElementById('loader-overlay').style.display='n
 async function loadAllData(){
   showLoader();
   try{
-    const [gpsR,cmjR,nbR,hipR,spR,t5R,brR,maR,moR,trR,phvR,rpmR,medR]=await Promise.allSettled([
+    const [gpsR,cmjR,nbR,hipR,spR,t5R,brR,maR,moR,trR,phvR,rpmR,medR,pcR]=await Promise.allSettled([
       fetch(API+'/api/gps').then(r=>r.json()),
       fetch(API+'/api/cmj').then(r=>r.json()),
       fetch(API+'/api/nordbord').then(r=>r.json()),
@@ -945,6 +1064,7 @@ async function loadAllData(){
       fetch(API+'/api/phv').then(r=>r.json()),
       fetch(API+'/api/rpm').then(r=>r.json()),
       fetch(API+'/api/medical').then(r=>r.json()),
+      fetch(API+'/api/playercards').then(r=>r.json()),
     ]);
     if(gpsR.status==='fulfilled'&&!gpsR.value?.error){const d=gpsR.value;PLAYERS=(d.players||[]).sort((a,b)=>a.localeCompare(b));GPS=d.gps||{};PM=d.pos_map||{};AM=d.age_map||{};LATEST=d.latest||{};MATCH_LIST=d.match_list||[];TEAM_WEEKLY=d.team_weekly||{};WEEK_KEYS=d.week_keys||[];}
     if(cmjR.status==='fulfilled'&&!cmjR.value?.error) CMJ=cmjR.value;
@@ -959,6 +1079,7 @@ async function loadAllData(){
     if(phvR.status==='fulfilled'&&!phvR.value?.error) PHV_DATA=phvR.value;
     if(rpmR.status==='fulfilled'&&!rpmR.value?.error) RPM=rpmR.value;
     if(medR.status==='fulfilled'&&!medR.value?.error) MEDICAL_DATA=medR.value;
+    if(pcR.status==='fulfilled'&&!pcR.value?.error) PLAYER_CARDS=pcR.value;
     document.getElementById('last-updated').textContent='Updated: '+new Date().toLocaleTimeString();
   }catch(err){
     document.getElementById('loader-overlay').innerHTML=`<div style="text-align:center;color:#fff"><div style="font-size:18px;font-weight:700;margin-bottom:8px">⚠ Could not load data</div><div style="font-size:13px;opacity:.7">${err.message}</div><button onclick="loadAllData()" style="margin-top:14px;padding:8px 20px;background:#cc0000;color:#fff;border:none;border-radius:3px;cursor:pointer;font-weight:700">Retry</button></div>`;
@@ -972,7 +1093,7 @@ async function loadAllData(){
 
 // ── NAV ───────────────────────────────────────────────────────────
 const DONE={};
-const INITS={daily:initDaily,matchday:initMatchday,teamperday:initTeamPerDay,teamweek:initTeamweek,playerday:initPlayerday,playerweek:initPlayerweek,acwr:initACWR,playercompare:initPlayerCompare,mdpm:initMdpm,vald:initVald,testing:initTesting,movement:initMovement,rank:initRankings,speedexp:initSpeedExp,trialist:initTrialist,phv:initPHV,medical:initMedical};
+const INITS={daily:initDaily,matchday:initMatchday,teamperday:initTeamPerDay,teamweek:initTeamweek,playerday:initPlayerday,playerweek:initPlayerweek,acwr:initACWR,playercompare:initPlayerCompare,mdpm:initMdpm,vald:initVald,testing:initTesting,movement:initMovement,rank:initRankings,speedexp:initSpeedExp,trialist:initTrialist,phv:initPHV,medical:initMedical,playercard:initPlayerCard};
 const PAGE_SECTION={};
 document.querySelectorAll('.nav[data-section-group]').forEach(navEl=>{
   navEl.querySelectorAll('.nav-tab').forEach(t=>{PAGE_SECTION[t.dataset.p]=navEl.dataset.sectionGroup;});
@@ -2707,6 +2828,70 @@ function renderTrialistMS(){
   }else{bench.innerHTML='';}
 }
 
+// ── PLAYER CARD ──────────────────────────────────────────────────
+// Same GK/CB/FB/MF/FW codes and PC color map used by posBadge() everywhere
+// else in the app, so the Player Card's position tag matches every table.
+function pcPosNorm(pos){
+  if(!pos)return null;
+  const p=String(pos).trim().toUpperCase();
+  if(p.includes('GK')||p.includes('GOAL'))return'GK';
+  if(p.includes('CB')||p.includes('CENTER BACK')||p.includes('CENTRE BACK'))return'CB';
+  if(p.includes('FB')||p.includes('FULL')||p.includes('BACK'))return'FB';
+  if(p.includes('DEF'))return'CB';
+  if(p.includes('MF')||p.includes('MID'))return'MF';
+  if(p.includes('FW')||p.includes('FOR')||p.includes('ATT')||p.includes('WING'))return'FW';
+  return null;
+}
+// Converts a 2-letter ISO country code to its flag emoji via Unicode
+// regional indicator symbols (e.g. 'US' -> 🇺🇸). No image assets needed.
+function pcFlagEmoji(code){
+  if(!code)return'🏳️';
+  const c=String(code).trim().toUpperCase();
+  if(c.length!==2||!/^[A-Z]{2}$/.test(c))return'🏳️';
+  const base=0x1F1E6;
+  return String.fromCodePoint(base+(c.charCodeAt(0)-65))+String.fromCodePoint(base+(c.charCodeAt(1)-65));
+}
+function initPlayerCard(){
+  const crestImg=document.querySelector('.logo-box img');
+  if(crestImg)document.getElementById('pc-crest-img').src=crestImg.src;
+  const sel=document.getElementById('pc-player');
+  const names=Object.keys(PLAYER_CARDS).sort((a,b)=>a.localeCompare(b));
+  if(!names.length){
+    document.getElementById('pc-empty').style.display='';
+    document.getElementById('pc-outer').style.display='none';
+    return;
+  }
+  document.getElementById('pc-empty').style.display='none';
+  document.getElementById('pc-outer').style.display='';
+  sel.innerHTML='';
+  names.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+  sel.onchange=renderPlayerCard;
+  renderPlayerCard();
+}
+function renderPlayerCard(){
+  const sel=document.getElementById('pc-player');
+  const d=PLAYER_CARDS[sel.value];
+  if(!d)return;
+  const num=v=>v!=null?v.toFixed(2):'—';
+  document.getElementById('pc-name').textContent=sel.value;
+  document.getElementById('pc-overall').textContent=num(d.overall);
+  document.getElementById('pc-pos').innerHTML=posBadge(pcPosNorm(d.position));
+  document.getElementById('pc-stat-agile').textContent=num(d.agile);
+  document.getElementById('pc-stat-fast').textContent=num(d.fast);
+  document.getElementById('pc-stat-strong').textContent=num(d.strong);
+  document.getElementById('pc-stat-durable').textContent=num(d.durable);
+  document.getElementById('pc-stat-powerful').textContent=num(d.powerful);
+  document.getElementById('pc-info-born').textContent=d.born||'—';
+  document.getElementById('pc-info-height').textContent=d.height||'—';
+  document.getElementById('pc-info-weight').textContent=d.weight!=null?d.weight+' lbs':'—';
+  document.getElementById('pc-info-position').textContent=d.position||'—';
+  document.getElementById('pc-flag').textContent=pcFlagEmoji(d.nationality);
+  const portrait=document.getElementById('pc-img-portrait'),action=document.getElementById('pc-img-action');
+  portrait.style.opacity=1;action.style.opacity=.85;
+  portrait.src=`player-cards/${d.slug}-portrait.jpg`;
+  action.src=`player-cards/${d.slug}-action.jpg`;
+}
+
 // ── BOOT ──────────────────────────────────────────────────────────
 const PAGE_TITLES={
   'page-daily':'DAILY REPORT',
@@ -2723,6 +2908,7 @@ const PAGE_TITLES={
   'page-speedexp':'SPEED EXPOSURE REPORT',
   'page-phv':'GROWTH & MATURATION REPORT',
   'page-medical':'MEDICAL REPORT',
+  'page-playercard':'PLAYER CARD',
 };
 async function exportPDF(pageId){
   const page=document.getElementById(pageId);

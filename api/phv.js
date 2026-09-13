@@ -6,6 +6,7 @@ const { fetchSheet } = require('./_sheet');
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.query.type === 'medical') return handleMedical(req, res);
+  if (req.query.type === 'cards') return handleCards(req, res);
   try {
     const rows = await fetchSheet('PHV');
     const byPlayer = {};
@@ -75,6 +76,43 @@ async function handleMedical(req, res) {
     console.error('[Medical] error:', err.message);
     res.status(500).json({ error: err.message });
   }
+}
+// /api/playercards — PlayerCards tab (one row per player, not a time series)
+async function handleCards(req, res) {
+  try {
+    const rows = await fetchSheet('PlayerCards');
+    const byPlayer = {};
+    rows.forEach(row => {
+      const player = row['Name'];
+      if (!player) return;
+      byPlayer[player] = {
+        slug:        slugify(player),
+        overall:     toNum(row['Overall']),
+        position:    row['Position']  || null,
+        agile:       toNum(row['Agile']),
+        fast:        toNum(row['Fast']),
+        strong:      toNum(row['Strong']),
+        durable:     toNum(row['Durable']),
+        powerful:    toNum(row['Powerful']),
+        born:        toNum(row['Born']),
+        height:      row['Height']  || null,
+        weight:      toNum(row['Weight']),
+        nationality: row['Nationality'] || null,
+      };
+    });
+    res.status(200).json(byPlayer);
+  } catch (err) {
+    console.error('[PlayerCards] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+}
+// Matches the naming convention expected for player-cards/ image files:
+// lowercase, spaces to hyphens, accents/punctuation stripped.
+function slugify(name) {
+  return String(name).trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-');
 }
 function toNumMed(v) {
   if (v === null || v === undefined || v === '') return null;
