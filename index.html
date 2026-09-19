@@ -59,6 +59,8 @@ tr:hover td{background:#fff5f5}
 tr:last-child td{border-bottom:none}
 .badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;font-family:var(--font)}
 .bgy{background:rgba(0,0,0,.06);color:var(--text2);border:1px solid var(--border)}
+.lm-g{background:#c9ebd2}.lm-o{background:#ffd9a8}.lm-r{background:#f5b5b0}
+td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
 .md-chips{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:8px}
 .md-chip{background:#fff;border:1px solid var(--border);padding:7px 4px;text-align:center;border-top:3px solid var(--red)}
 .mcd{font-family:var(--font);font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:3px}
@@ -169,7 +171,7 @@ tr:last-child td{border-bottom:none}
 <div class="nav" data-section-group="dailyperf">
   <div class="nav-tab active" data-p="daily">Daily Report</div>
   <div class="nav-tab" data-p="speedexp">Speed Exposure</div>
-  <div class="nav-tab" data-p="acwr">Acute:Chronic</div>
+  <div class="nav-tab" data-p="acwr">Load Monitoring</div>
   <div class="nav-tab" data-p="matchday">Match Day</div>
   <div class="nav-tab" data-p="teamperday">Team / Day</div>
   <div class="nav-tab" data-p="teamweek">Team / Week</div>
@@ -309,16 +311,19 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
-<!-- ACUTE:CHRONIC -->
+<!-- LOAD MONITORING -->
 <div class="page" id="page-acwr">
   <div class="main">
     <div class="ctrl-row">
       <span class="cl">Team:</span><select class="ctrl" id="ac-team" onchange="renderACWR()"><option value="all">All Teams</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option></select>
+      <span class="cl">Day:</span><select class="ctrl" id="lm-date" onchange="renderLoadMonitor()"></select>
       <span class="cl">Window:</span><span style="font-family:var(--fontb);font-size:12px;color:#888">Last 28 Days</span>
       <button class="export-btn" onclick="exportPDF('page-acwr')" style="margin-left:auto">⬇ Export PDF</button>
     </div>
     <div style="display:flex;gap:10px;align-items:flex-start">
       <div style="flex:1;min-width:0">
+        <div class="panel sg"><div class="pt ptl">Daily Load — Z-Score vs 28-Day Rolling Average</div><div class="tw"><table id="tbl-lm-z"></table></div></div>
+        <div class="panel sg"><div class="pt ptl">Daily Load — % Difference vs MD+/- Average <span style="font-weight:400;text-transform:none;color:#888">— vs player's average for the same MD day (Full participation, same season, prior days)</span></div><div class="tw"><table id="tbl-lm-md"></table></div></div>
         <div class="panel sg"><div class="pt">Total Distance — Acute:Chronic</div><div style="position:relative;height:300px"><canvas id="c-ac-dist"></canvas></div></div>
         <div class="panel sg"><div class="pt">HSR Distance — Acute:Chronic</div><div style="position:relative;height:300px"><canvas id="c-ac-hsr"></canvas></div></div>
         <div class="panel sg"><div class="pt">VHSR Distance — Acute:Chronic</div><div style="position:relative;height:300px"><canvas id="c-ac-vhsr"></canvas></div></div>
@@ -342,6 +347,18 @@ tr:last-child td{border-bottom:none}
             <div style="width:14px;height:14px;background:#f8dcda;border:1px solid #e8b6b1;border-radius:2px;flex-shrink:0;margin-top:1px"></div>
             <span style="font-family:var(--fontb);font-size:12px;color:#444;line-height:1.3"><b>&gt; 1.50</b><br>Danger zone</span>
           </div>
+        </div>
+        <div class="pt ptl" style="margin-top:16px">Z-Score</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-family:var(--fontb);font-size:12px;color:#444;line-height:1.3">
+          <div style="display:flex;gap:8px"><div class="lm-g" style="width:14px;height:14px;border-radius:2px;flex-shrink:0"></div><span><b>-1.8 to 1.8</b></span></div>
+          <div style="display:flex;gap:8px"><div class="lm-o" style="width:14px;height:14px;border-radius:2px;flex-shrink:0"></div><span><b>±1.9 to ±3.9</b></span></div>
+          <div style="display:flex;gap:8px"><div class="lm-r" style="width:14px;height:14px;border-radius:2px;flex-shrink:0"></div><span><b>≤ -4 or ≥ 4</b></span></div>
+        </div>
+        <div class="pt ptl" style="margin-top:16px">% vs MD+/- Avg</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-family:var(--fontb);font-size:12px;color:#444;line-height:1.3">
+          <div style="display:flex;gap:8px"><div class="lm-g" style="width:14px;height:14px;border-radius:2px;flex-shrink:0"></div><span><b>within 14.9%</b></span></div>
+          <div style="display:flex;gap:8px"><div class="lm-o" style="width:14px;height:14px;border-radius:2px;flex-shrink:0"></div><span><b>15 – 19.9%</b></span></div>
+          <div style="display:flex;gap:8px"><div class="lm-r" style="width:14px;height:14px;border-radius:2px;flex-shrink:0"></div><span><b>20% or more</b></span></div>
         </div>
       </div>
     </div>
@@ -640,6 +657,12 @@ tr:last-child td{border-bottom:none}
 <div class="page" id="page-mdpm">
   <div class="main">
     <div class="ctrl-row"><span class="cl">Season:</span><select class="ctrl" id="mdpm-season" onchange="renderMdpm()"><option value="all">All Seasons</option></select><span class="cl">Age:</span><select class="ctrl" id="mdpm-age" onchange="initMdpm()"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option></select><span class="cl">Player:</span><select class="ctrl" id="mdpm-player"></select><span class="cl">Participation:</span><select class="ctrl" id="mdpm-part" onchange="renderMdpm()"><option value="full">Full Only</option><option value="all">All</option></select><button class="export-btn" onclick="exportPDF('page-mdpm')" style="margin-left:auto">⬇ Export PDF</button></div>
+    <div class="ctrl-row">
+      <label class="cl" style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="mdpm-proj" onchange="renderMdpm()">Project MD</label>
+      <input type="range" id="mdpm-mins" min="0" max="90" step="1" value="90" oninput="renderMdpm()" style="width:220px;accent-color:var(--red)" disabled>
+      <span id="mdpm-mins-lbl" style="font-family:var(--font);font-size:13px;font-weight:800;color:var(--red);min-width:38px">90′</span>
+      <span id="mdpm-proj-note" style="font-family:var(--fontb);font-size:11px;color:#888"></span>
+    </div>
     <div class="md-chips" id="mdpm-chips"></div>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;padding:0 2px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:6px">
@@ -1560,8 +1583,91 @@ function buildACWRSnapshot(metricKey,teamFilter){
   });
   return results;
 }
+const LM_METRICS=[['dist','Distance'],['hsr','HSR'],['vhsr','VHSR'],['sprint','Sprint'],['hml','HMLD'],['acc','Acc'],['dec','Dec']];
+const LM_Z_MIN_DAYS=5,LM_MD_MIN_DAYS=2;
+function lmPlayerDays(p){
+  const byDay={};
+  (GPS[p]||[]).forEach(s=>{
+    if(!s.date||s.dist==null)return;
+    const key=dayKey(parseDate(s.date));
+    (byDay[key]=byDay[key]||[]).push(s);
+  });
+  return Object.keys(byDay).sort().map(key=>{
+    const ss=byDay[key];
+    const md=(ss.find(s=>s.md&&String(s.md).trim()!=='IDP')||ss.find(s=>s.md)||{}).md;
+    const part=ss.some(s=>String(s.participation||'').trim()==='Full')?'Full':(String(ss[0].participation||'').trim()||null);
+    return{key,date:ss[0].date,md:md?String(md).trim():null,part,load:combineDaySessions(ss)};
+  });
+}
+function lmZ(days,idx,k){
+  const cur=days[idx].load[k];
+  if(cur==null)return null;
+  const[y,m,d]=days[idx].key.split('-').map(Number);
+  const lowKey=dayKey(new Date(y,m-1,d-28));
+  const vs=days.slice(0,idx).filter(x=>x.key>=lowKey).map(x=>x.load[k]).filter(v=>v!=null);
+  if(vs.length<LM_Z_MIN_DAYS)return null;
+  const mean=vs.reduce((a,b)=>a+b,0)/vs.length;
+  const sd=Math.sqrt(vs.reduce((a,b)=>a+(b-mean)**2,0)/(vs.length-1));
+  if(!sd)return null;
+  return{z:(cur-mean)/sd,cur,mean,sd,n:vs.length};
+}
+function lmMdPct(days,idx,k){
+  const day=days[idx],cur=day.load[k];
+  if(cur==null||!day.md)return null;
+  const season=dateToSeason(day.date);
+  const vs=days.slice(0,idx).filter(x=>x.md===day.md&&x.part==='Full'&&dateToSeason(x.date)===season).map(x=>x.load[k]).filter(v=>v!=null);
+  if(vs.length<LM_MD_MIN_DAYS)return null;
+  const mean=vs.reduce((a,b)=>a+b,0)/vs.length;
+  if(!mean)return null;
+  return{pct:(cur-mean)/mean*100,cur,mean,n:vs.length};
+}
+function lmZCls(z){const a=Math.round(Math.abs(z)*10)/10;return a>=4?'lm-r':a>=1.9?'lm-o':'lm-g';}
+function lmPctCls(p){const a=Math.round(Math.abs(p)*10)/10;return a>=20?'lm-r':a>=15?'lm-o':'lm-g';}
+function renderLoadMonitor(){
+  const team=document.getElementById('ac-team')?.value||'all';
+  const sel=document.getElementById('lm-date');if(!sel)return;
+  const all={},dateSet={};
+  PLAYERS.forEach(p=>{
+    if(team!=='all'&&pAge(p)!==team)return;
+    const days=lmPlayerDays(p);
+    if(!days.length)return;
+    all[p]=days;
+    days.forEach(d=>{dateSet[d.key]=1;});
+  });
+  const keys=Object.keys(dateSet).sort().reverse();
+  const prev=sel.value;
+  sel.innerHTML=keys.map(k=>{
+    const[y,m,d]=k.split('-').map(Number);
+    return`<option value="${k}">${new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'})}</option>`;
+  }).join('');
+  if(keys.includes(prev))sel.value=prev;
+  const key=sel.value;
+  const zEl=document.getElementById('tbl-lm-z'),mdEl=document.getElementById('tbl-lm-md');
+  const head='<thead><tr><th>Player</th><th>MD</th><th>Part.</th>'+LM_METRICS.map(([,l])=>`<th style="text-align:center">${l}</th>`).join('')+'</tr></thead>';
+  const rowsZ=[],rowsMd=[];
+  Object.keys(all).sort((a,b)=>a.localeCompare(b)).forEach(p=>{
+    const days=all[p],idx=days.findIndex(d=>d.key===key);
+    if(idx<0)return;
+    const day=days[idx];
+    const lead=`<td style="font-weight:600">${p}</td><td>${day.md||'—'}</td><td>${day.part||'—'}</td>`;
+    rowsZ.push('<tr>'+lead+LM_METRICS.map(([k])=>{
+      const r=lmZ(days,idx,k);
+      if(!r)return'<td class="lm-c" style="color:#bbb">—</td>';
+      return`<td class="lm-c ${lmZCls(r.z)}" title="Day: ${r.cur.toFixed(1)} | 28-day avg: ${r.mean.toFixed(1)} | SD: ${r.sd.toFixed(1)} | n=${r.n}">${r.z>0?'+':''}${r.z.toFixed(1)}</td>`;
+    }).join('')+'</tr>');
+    rowsMd.push('<tr>'+lead+LM_METRICS.map(([k])=>{
+      const r=lmMdPct(days,idx,k);
+      if(!r)return'<td class="lm-c" style="color:#bbb">—</td>';
+      return`<td class="lm-c ${lmPctCls(r.pct)}" title="Day: ${r.cur.toFixed(1)} | ${day.md} avg: ${r.mean.toFixed(1)} | n=${r.n}">${r.pct>0?'+':''}${r.pct.toFixed(1)}%</td>`;
+    }).join('')+'</tr>');
+  });
+  const empty='<tbody><tr><td style="color:#999">No sessions for this day.</td></tr></tbody>';
+  zEl.innerHTML=rowsZ.length?head+'<tbody>'+rowsZ.join('')+'</tbody>':empty;
+  mdEl.innerHTML=rowsMd.length?head+'<tbody>'+rowsMd.join('')+'</tbody>':empty;
+}
 function initACWR(){renderACWR();}
 function renderACWR(){
+  renderLoadMonitor();
   const team=document.getElementById('ac-team')?.value||'all';
   [['dist','c-ac-dist'],['hsr','c-ac-hsr'],['vhsr','c-ac-vhsr'],['sprint','c-ac-sprint'],['hml','c-ac-hml'],['acc','c-ac-acc'],['dec','c-ac-dec']].forEach(([k,id])=>{
     const data=buildACWRSnapshot(k,team).filter(d=>d.chronic>0||d.acute>0).sort((a,b)=>(b.acwr??-1)-(a.acwr??-1));
@@ -2114,12 +2220,34 @@ function renderMdpm(){
       ?mdGroups[d].filter(s=>String(s.participation||'').trim()==='Full')
       :mdGroups[d];
   });
+  const proj=!!document.getElementById('mdpm-proj')?.checked;
+  const projMins=+document.getElementById('mdpm-mins')?.value||0;
+  document.getElementById('mdpm-mins').disabled=!proj;
+  document.getElementById('mdpm-mins-lbl').textContent=projMins+'′';
+  const mdIdx=MD_DAYS.indexOf('MD');
+  const matches=(activeGroups.MD||[]).filter(s=>s.mins>0);
+  // Projected MD = minutes-weighted per-minute rate over previous matches × selected minutes
+  const projVal=k=>{
+    const ms=matches.filter(s=>s[k]!=null);
+    const totMins=ms.reduce((a,s)=>a+s.mins,0);
+    return totMins?Math.round(ms.reduce((a,s)=>a+s[k],0)/totMins*projMins):null;
+  };
+  document.getElementById('mdpm-proj-note').textContent=proj
+    ?(matches.length?`Projected from ${matches.length} previous match${matches.length===1?'':'es'} (per-minute rate × ${projMins} min)`:'No previous matches with minutes to project from')
+    :'';
+  const labels=MD_DAYS.map(d=>proj&&d==='MD'?`MD (${projMins}′ proj.)`:d);
   const cc=d=>d==='IDP'?'#ff9500':d==='MD'?'#1a1a1a':d.includes('+')?'#990000':'#cc0000';
   const distAvgs=MD_DAYS.map(d=>activeGroups[d]?.length?Math.round(avg(activeGroups[d].map(s=>s.dist))):null);
-  document.getElementById('mdpm-chips').innerHTML=MD_DAYS.map((d,i)=>`<div class="md-chip" style="border-top-color:${cc(d)}"><div class="mcd" style="color:${cc(d)}">${d}</div><div class="mcv" style="color:${cc(d)}">${distAvgs[i]||'—'}</div><div class="mcu">m avg</div></div>`).join('');
+  if(proj)distAvgs[mdIdx]=projVal('dist');
+  document.getElementById('mdpm-chips').innerHTML=MD_DAYS.map((d,i)=>{
+    const isProj=proj&&d==='MD';
+    return`<div class="md-chip" style="border-top-color:${cc(d)}"><div class="mcd" style="color:${cc(d)}">${isProj?`MD ${projMins}′`:d}</div><div class="mcv" style="color:${cc(d)}">${distAvgs[i]??'—'}</div><div class="mcu">${isProj?'m proj.':'m avg'}</div></div>`;
+  }).join('');
   ['dist','hsr','vhsr','sprint','expl','acc','dec'].forEach(k=>{
     const avgs=MD_DAYS.map(d=>activeGroups[d]?.length?Math.round(avg(activeGroups[d].map(s=>s[k]).filter(x=>x!=null))):null);
-    mkBarLine('c-mdpm-'+k,MD_DAYS,avgs,Array(MD_DAYS.length).fill(Math.round(avg(avgs.filter(x=>x!=null))||0)),MC[k]?.c||'#cc0000');
+    const line=Array(MD_DAYS.length).fill(Math.round(avg(avgs.filter(x=>x!=null))||0));
+    if(proj)avgs[mdIdx]=projVal(k);
+    mkBarLine('c-mdpm-'+k,labels,avgs,line,MC[k]?.c||'#cc0000');
   });
 }
 
@@ -2899,7 +3027,7 @@ const PAGE_TITLES={
   'page-teamweek':'TEAM / WEEK REPORT',
   'page-playerday':'PLAYER / DAY REPORT',
   'page-playerweek':'PLAYER / WEEK REPORT',
-  'page-acwr':'ACUTE:CHRONIC REPORT',
+  'page-acwr':'LOAD MONITORING REPORT',
   'page-trialist':'TRIALIST REPORT',
   'page-mdpm':'MD +/- REPORT',
   'page-testing':'TESTING REPORT',
