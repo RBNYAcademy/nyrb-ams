@@ -14,6 +14,9 @@ module.exports = async (req, res) => {
         height: toNum(row['Jump Height (Imp-Mom) [cm]']),
         rsi:    toNum(row['RSI-modified [m/s]']),
         power:  toNum(row['Peak Power / BM [W/kg]']),
+        bw:     toNum(row['BW [KG]']),
+        eccVel: toNum(row['Eccentric Peak Velocity [m/s]']),
+        depth:  toNum(row['Countermovement Depth [cm]']),
         age:    row['Age Group'] || null,
       });
     });

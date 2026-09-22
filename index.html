@@ -1907,18 +1907,29 @@ const PCS_METRICS=[
   {v:'gps-acc',l:'Accelerations',g:'GPS',src:'gps',f:'acc'},
   {v:'gps-dec',l:'Decelerations',g:'GPS',src:'gps',f:'dec'},
   {v:'gps-mins',l:'Session Length (min)',g:'GPS',src:'gps',f:'mins'},
+  {v:'gps-hml',l:'HML Distance (m)',g:'GPS',src:'gps',f:'hml'},
   {v:'cmj-height',l:'CMJ Height (cm)',g:'VALD',src:'cmj',f:'height'},
   {v:'cmj-rsi',l:'CMJ RSI-mod',g:'VALD',src:'cmj',f:'rsi'},
   {v:'cmj-power',l:'CMJ Power/BM',g:'VALD',src:'cmj',f:'power'},
+  {v:'cmj-bw',l:'CMJ Body Weight (kg)',g:'VALD',src:'cmj',f:'bw'},
+  {v:'cmj-eccVel',l:'CMJ Ecc Peak Velocity (m/s)',g:'VALD',src:'cmj',f:'eccVel'},
+  {v:'cmj-depth',l:'CMJ Countermovement Depth (cm)',g:'VALD',src:'cmj',f:'depth'},
   {v:'nb-lMax',l:'NordBord Left (N)',g:'VALD',src:'nb',f:'lMax'},
   {v:'nb-rMax',l:'NordBord Right (N)',g:'VALD',src:'nb',f:'rMax'},
   {v:'nb-bilateral',l:'NordBord Bilateral Avg (N)',g:'VALD',src:'nb',f:'bilateral'},
+  {v:'nb-imbalance',l:'NordBord Imbalance (%)',g:'VALD',src:'nb',f:'imbalance'},
+  {v:'nb-lMaxTorque',l:'NordBord Left Torque (Nm)',g:'VALD',src:'nb',f:'lMaxTorque'},
+  {v:'nb-rMaxTorque',l:'NordBord Right Torque (Nm)',g:'VALD',src:'nb',f:'rMaxTorque'},
+  {v:'nb-lMaxPerKg',l:'NordBord Left (N/kg)',g:'VALD',src:'nb',f:'lMaxPerKg'},
+  {v:'nb-rMaxPerKg',l:'NordBord Right (N/kg)',g:'VALD',src:'nb',f:'rMaxPerKg'},
   {v:'hip-abd-lMax',l:'Hip Abduction Left (N)',g:'VALD',src:'hip-abd',f:'lMax'},
   {v:'hip-abd-rMax',l:'Hip Abduction Right (N)',g:'VALD',src:'hip-abd',f:'rMax'},
   {v:'hip-abd-bilateral',l:'Hip Abduction Bilateral (N)',g:'VALD',src:'hip-abd',f:'bilateral'},
+  {v:'hip-abd-imbalance',l:'Hip Abduction Imbalance (%)',g:'VALD',src:'hip-abd',f:'imbalance'},
   {v:'hip-add-lMax',l:'Hip Adduction Left (N)',g:'VALD',src:'hip-add',f:'lMax'},
   {v:'hip-add-rMax',l:'Hip Adduction Right (N)',g:'VALD',src:'hip-add',f:'rMax'},
   {v:'hip-add-bilateral',l:'Hip Adduction Bilateral (N)',g:'VALD',src:'hip-add',f:'bilateral'},
+  {v:'hip-add-imbalance',l:'Hip Adduction Imbalance (%)',g:'VALD',src:'hip-add',f:'imbalance'},
   {v:'sprint-total',l:'Sprint Total (s)',g:'Testing',src:'sprint',f:'total'},
   {v:'sprint-split1',l:'Sprint 0-10m (s)',g:'Testing',src:'sprint',f:'split1'},
   {v:'sprint-split2',l:'Sprint 10-20m (s)',g:'Testing',src:'sprint',f:'split2'},
@@ -1934,14 +1945,25 @@ const PCS_METRICS=[
   {v:'phv-adultHeight',l:'Adult Height (in)',g:'PHV',src:'phv',f:'adultHeight'},
   {v:'phv-phv',l:'PHV Offset',g:'PHV',src:'phv',f:'phv'},
   {v:'phv-growthPct',l:'Growth %',g:'PHV',src:'phv',f:'growthPct'},
+  {v:'phv-ageAtTest',l:'Age at Test (yrs)',g:'PHV',src:'phv',f:'ageAtTest'},
+  {v:'phv-bioAge',l:'Biological Age (yrs)',g:'PHV',src:'phv',f:'bioAge'},
+  {v:'ms-squat',l:'Squat Score',g:'Movement Screen',src:'ms',f:'squat'},
+  {v:'ms-hinge',l:'Hinge Score',g:'Movement Screen',src:'ms',f:'hinge'},
+  {v:'ms-splitSquat',l:'Split Squat Score',g:'Movement Screen',src:'ms',f:'splitSquat'},
+  {v:'ms-pushups',l:'Push-ups Score',g:'Movement Screen',src:'ms',f:'pushups'},
 ];
+// Strength (Epley 1RM) metrics are built per exercise from the RPM sheet — see pcsPopulateMetrics
 
 function pcsPopulateMetrics(){
+  const exs=[...new Set(Object.values(RPM).flat().map(r=>r.exercise).filter(Boolean))].sort();
+  exs.forEach(ex=>{if(!PCS_METRICS.some(m=>m.src==='rpm'&&m.f===ex))PCS_METRICS.push({v:'rpm-'+ex,l:ex+' 1RM (lb)',g:'Strength',src:'rpm',f:ex});});
   ['pcs-x','pcs-y'].forEach(id=>{
     const sel=document.getElementById(id);
     if(!sel||sel.options.length>0)return;
     const grps={};
-    PCS_METRICS.forEach(m=>{if(!grps[m.g])grps[m.g]=[];grps[m.g].push(m);});
+    const players=pcsAllPlayers('all');
+    // Hide metrics whose sheet column has no data at all (e.g. a removed VALD export column)
+    PCS_METRICS.filter(m=>players.some(p=>pcsGetValues(p,m.v).length)).forEach(m=>{if(!grps[m.g])grps[m.g]=[];grps[m.g].push(m);});
     Object.entries(grps).forEach(([grp,metrics])=>{
       const og=document.createElement('optgroup');og.label=grp;
       metrics.forEach(m=>{const o=document.createElement('option');o.value=m.v;o.textContent=m.l;og.appendChild(o);});
@@ -1962,19 +1984,21 @@ function pcsGetValues(player,metricVal,seasonF,sessionF,dateFrom,dateTo){
   if(src==='gps'){return fs((pcsLookup(GPS,player)||[]).filter(s=>s.dist&&s[f]!=null)).map(s=>({v:s[f],date:s.date}));}
   if(src==='cmj'){return fs((pcsLookup(CMJ,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
   if(src==='nb'){return fs(pcsLookup(NB,player)||[]).map(r=>{const v=f==='bilateral'?+((r.lMax||0)+(r.rMax||0)).toFixed(1)/2:r[f];return v!=null?{v,date:r.date}:null;}).filter(Boolean);}
-  if(src==='hip-abd'||src==='hip-add'){const dir=src==='hip-abd'?'pull':'squeeze';return fs((pcsLookup(VALD,player)||[]).filter(r=>dn(r.direction)===dir&&(r.lMax>0||r.rMax>0))).map(r=>{const v=f==='bilateral'?+((r.lMax||0)+(r.rMax||0)).toFixed(1)/2:r[f];return(v!=null&&v>0)?{v:+v.toFixed(1),date:r.date}:null;}).filter(Boolean);}
+  if(src==='hip-abd'||src==='hip-add'){const dir=src==='hip-abd'?'pull':'squeeze';return fs((pcsLookup(VALD,player)||[]).filter(r=>dn(r.direction)===dir&&(r.lMax>0||r.rMax>0))).map(r=>{const v=f==='bilateral'?+((r.lMax||0)+(r.rMax||0)).toFixed(1)/2:r[f];return(v!=null&&(v>0||f==='imbalance'))?{v:+v.toFixed(1),date:r.date}:null;}).filter(Boolean);}
   if(src==='sprint'){return fs((pcsLookup(SPRINT,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
   if(src==='t505'){return fs((pcsLookup(T505,player)||[]).filter(r=>r.time!=null)).map(r=>({v:r.time,date:r.date}));}
   if(src==='broad'){return fs((pcsLookup(BROAD,player)||[]).filter(r=>r.dist!=null)).map(r=>({v:r.dist,date:r.date}));}
   if(src==='mas'){return fs((pcsLookup(MAS_DATA,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
   if(src==='phv'){return fs((pcsLookup(PHV_DATA,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
+  if(src==='ms'){return fs((pcsLookup(MS_DATA,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
+  if(src==='rpm'){return fs((pcsLookup(RPM,player)||[]).filter(r=>r.exercise===f&&r.oneRM>0)).map(r=>({v:+r.oneRM,date:r.date}));}
   return[];
 }
 
 function pcsAllPlayers(ageF){
   // Build a Map keyed by lowercase name. Process non-GPS first, then GPS last so GPS casing wins.
   const canon=new Map();
-  [CMJ,NB,VALD,SPRINT,T505,BROAD,MAS_DATA,PHV_DATA].forEach(src=>{
+  [CMJ,NB,VALD,SPRINT,T505,BROAD,MAS_DATA,PHV_DATA,MS_DATA,RPM].forEach(src=>{
     Object.keys(src).forEach(name=>{const k=name.toLowerCase();if(!canon.has(k))canon.set(k,name);});
   });
   // GPS overwrites — its casing is canonical
