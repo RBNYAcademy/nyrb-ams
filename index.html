@@ -3368,7 +3368,7 @@ function renderPHV(){
   // Chart 2: Stage distribution
   const stageLbls=['Pre-PHV','Circum-PHV','Post-PHV'];
   const stageCols=['#0055cc','#ff9500','#007a30'];
-  {const c=document.getElementById('c-phv-dist');if(c){if(CH['c-phv-dist'])CH['c-phv-dist'].destroy();CH['c-phv-dist']=new Chart(c,{type:'bar',data:{labels:stageLbls,datasets:[{data:[pre,circum,post],backgroundColor:stageCols.map(c=>c+'66'),borderColor:stageCols,borderWidth:2,borderRadius:4}]},options:{...bOpt(),plugins:{legend:{display:false},datalabels:{anchor:'end',align:'top',color:'#222',font:{size:11,weight:'700'},formatter:v=>v}}},plugins:[ChartDataLabels]});}}
+  {const c=document.getElementById('c-phv-dist');if(c){if(CH['c-phv-dist'])CH['c-phv-dist'].destroy();CH['c-phv-dist']=new Chart(c,{type:'bar',data:{labels:stageLbls,datasets:[{data:[pre,circum,post],backgroundColor:stageCols.map(c=>c+'66'),borderColor:stageCols,borderWidth:2,borderRadius:4}]},options:{...bOpt(),layout:{padding:{top:24}},plugins:{legend:{display:false},datalabels:{anchor:'end',align:'top',clip:false,color:'#222',font:{size:11,weight:'700'},formatter:v=>v}}},plugins:[ChartDataLabels]});}}
 
   // Chart 3: Bio Age vs Chrono Age scatter
   const ageRows=rows.filter(r=>r.ageAtTest!==null&&r.bioAge!==null);
