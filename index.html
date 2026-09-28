@@ -106,6 +106,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
 .sn{padding:1px 6px;border-radius:2px;font-family:var(--font);font-weight:800;font-size:14px;color:#fff}
 .rpill{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:3px;font-family:var(--font);font-size:14px;font-weight:800;color:#fff}
 .rn{font-family:var(--font);font-size:16px;font-weight:800;color:#ccc}.rn.top{color:var(--red)}
+.min-key{margin-left:auto;border-left:1px solid var(--border);padding:2px 4px 2px 14px;font-size:10px;color:var(--text2)}.min-key-t{font-family:var(--font);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--red);margin-bottom:4px}.min-key-row{display:flex;align-items:center;gap:6px;margin:3px 0}.min-sw{display:inline-flex;align-items:center;justify-content:center;width:16px;height:12px;border:1px solid #e3e3e3;border-radius:2px;font-size:9px;font-weight:800;flex-shrink:0}
 .rb-w{display:flex;align-items:center;gap:5px}.rb{height:5px;border-radius:2px;background:var(--red)}
 @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 .export-btn{background:var(--red);color:#fff;border:none;padding:5px 13px;border-radius:3px;font-family:var(--font);font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:5px;flex-shrink:0}
@@ -173,6 +174,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
   <div class="nav-tab" data-p="speedexp">Speed Exposure</div>
   <div class="nav-tab" data-p="acwr">Load Monitoring</div>
   <div class="nav-tab" data-p="matchday">Match Day</div>
+  <div class="nav-tab" data-p="minutes">Player Minutes Tracker</div>
   <div class="nav-tab" data-p="teamperday">Team / Day</div>
   <div class="nav-tab" data-p="teamweek">Team / Week</div>
   <div class="nav-tab" data-p="playerday">Player / Day</div>
@@ -247,7 +249,38 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
     </div>
     <div id="md-debug" style="font-size:11px;color:#888;padding:4px 0 8px;font-family:monospace"></div>
     <div id="gauges" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>
-    <div class="panel sg" style="margin-top:12px"><div class="pt ptl">Player Minutes</div><div class="tw"><table id="tbl-md-mins"></table></div></div>
+  </div>
+</div>
+
+<!-- PLAYER MINUTES TRACKER -->
+<div class="page" id="page-minutes">
+  <div class="main">
+    <div class="ctrl-row">
+      <span class="cl">Season:</span><select class="ctrl" id="min-season" onchange="renderMinutes()"><option value="all">All Seasons</option></select>
+      <span class="cl">Age:</span><select class="ctrl" id="min-age" onchange="renderMinutes()"><option value="all">All Players</option><option value="protected">Protected Players</option><option value="U18">U18</option><option value="U16">U16</option><option value="U15">U15</option><option value="U14">U14</option><option value="U13">U13</option></select>
+      <span class="cl">Match:</span><select class="ctrl" id="min-match" onchange="renderMinutes()"><option value="all">All Matches</option></select>
+      <span class="cl">Pos:</span><select class="ctrl" id="min-pos" onchange="renderMinutes()"><option value="all">All</option><option value="CB">CB</option><option value="FW">FW</option><option value="FB">FB</option><option value="GK">GK</option><option value="MF">MF</option></select>
+      <span class="cl">Sort by:</span>
+      <select class="ctrl" id="min-sort" onchange="renderMinutes()">
+        <option value="name">Name (A–Z)</option>
+        <option value="total">Total Minutes</option>
+        <option value="apps">Appearances</option>
+        <option value="avg">Avg Minutes / App</option>
+      </select>
+      <button class="export-btn" onclick="exportPDF('page-minutes')">⬇ Export PDF</button>
+    </div>
+    <div class="panel sg" style="margin-bottom:12px;display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+      <div class="dh-kpis" id="min-kpis" style="padding:6px 4px"></div>
+      <div class="min-key">
+        <div class="min-key-t">Color Key</div>
+        <div class="min-key-row"><span class="min-sw" style="width:44px;background:linear-gradient(90deg,rgb(244,204,204),rgb(255,242,204),rgb(217,234,211))"></span>% Target — furthest behind → closest to target (vs. best in view)</div>
+        <div class="min-key-row"><span class="min-sw" style="width:44px;background:linear-gradient(90deg,#d6d6d6,#333)"></span>Total Minutes bar — fills toward target (2,000 protected / 3,000 all others)</div>
+        <div class="min-key-row"><span class="min-sw" style="width:44px;background:linear-gradient(90deg,rgba(204,0,0,.12),rgba(204,0,0,.8))"></span>Match grid — minutes in that match (light = cameo, dark = ~90)</div>
+        <div class="min-key-row"><span class="min-sw" style="background:#fff4e0;color:#b36b00">✓</span>Played — minutes not logged<span class="min-sw" style="margin-left:12px;color:#bbb">·</span>Did not feature</div>
+      </div>
+    </div>
+    <div class="panel sg"><div class="pt ptl" id="min-season-title">Season Minutes</div><div class="tw"><table id="tbl-min-season"></table></div></div>
+    <div class="panel sg" style="margin-top:12px"><div class="pt ptl">Match-by-Match Minutes</div><div class="tw"><table id="tbl-min-grid"></table></div></div>
   </div>
 </div>
 
@@ -1025,7 +1058,7 @@ function populateSeasonDropdowns(){
   const seasons=[...found].sort().reverse();
   const currentSeason=dateToSeason(new Date().toISOString().slice(0,10))||'2025-26';
   const defaultSeason=seasons.includes(currentSeason)?currentSeason:seasons[0];
-  ['mdpm-season','test-season','rank-season','pcs-season','tpd-season','tw-season','pd-season','pw-season','spd-season','qmc-season'].forEach(id=>{
+  ['mdpm-season','test-season','rank-season','pcs-season','tpd-season','tw-season','pd-season','pw-season','spd-season','qmc-season','min-season'].forEach(id=>{
     const sel=document.getElementById(id);if(!sel)return;
     sel.innerHTML='<option value="all">All Seasons</option>';
     seasons.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sel.appendChild(o);});
@@ -1116,7 +1149,7 @@ async function loadAllData(){
 
 // ── NAV ───────────────────────────────────────────────────────────
 const DONE={};
-const INITS={daily:initDaily,matchday:initMatchday,teamperday:initTeamPerDay,teamweek:initTeamweek,playerday:initPlayerday,playerweek:initPlayerweek,acwr:initACWR,playercompare:initPlayerCompare,mdpm:initMdpm,vald:initVald,testing:initTesting,movement:initMovement,rank:initRankings,speedexp:initSpeedExp,trialist:initTrialist,phv:initPHV,medical:initMedical,playercard:initPlayerCard};
+const INITS={daily:initDaily,matchday:initMatchday,minutes:initMinutes,teamperday:initTeamPerDay,teamweek:initTeamweek,playerday:initPlayerday,playerweek:initPlayerweek,acwr:initACWR,playercompare:initPlayerCompare,mdpm:initMdpm,vald:initVald,testing:initTesting,movement:initMovement,rank:initRankings,speedexp:initSpeedExp,trialist:initTrialist,phv:initPHV,medical:initMedical,playercard:initPlayerCard};
 const PAGE_SECTION={};
 document.querySelectorAll('.nav[data-section-group]').forEach(navEl=>{
   navEl.querySelectorAll('.nav-tab').forEach(t=>{PAGE_SECTION[t.dataset.p]=navEl.dataset.sectionGroup;});
@@ -1276,10 +1309,6 @@ function renderGauges(idx){
   let mdData=(info.data||[]).filter(d=>d.dist&&d.pos!=='GK'&&(ageF==='all'||d.age===ageF));
   if(lf==='full')mdData=mdData.filter(d=>getMins(d)>=60);
   else if(lf==='under')mdData=mdData.filter(d=>{const m=getMins(d);return m>0&&m<60;});
-  // Minutes table includes GKs (excluded above since they don't wear GPS units).
-  let mdMinsData=(info.data||[]).filter(d=>ageF==='all'||d.age===ageF);
-  if(lf==='full')mdMinsData=mdMinsData.filter(d=>getMins(d)>=60);
-  else if(lf==='under')mdMinsData=mdMinsData.filter(d=>{const m=getMins(d);return m>0&&m<60;});
   const weighted=document.getElementById('md-view')?.value==='weighted';
   const wMetrics=new Set(['dist','hsr','vhsr','sprint','expl','acc','dec']);
   const teamAvg=(data,k)=>{
@@ -1350,33 +1379,197 @@ function renderGauges(idx){
       </div>
     </div>`;
   }).join('');
-  renderMdMinutes(mdMinsData,currentSeason);
 }
-// Minutes table for the selected match day — includes GKs (unlike the GPS
-// gauges above, which exclude them since they don't wear GPS units). The
-// Age filter narrows which players show up (their age in this match), but
-// the season-total column always sums a player's minutes across every
-// match in that season, regardless of age group played.
-function renderMdMinutes(mdData,season){
-  const rows=[...mdData].filter(d=>d.name).sort((a,b)=>getMinsMd(b)-getMinsMd(a));
-  if(!rows.length){document.getElementById('tbl-md-mins').innerHTML='<tbody><tr><td style="color:#999">No data for this match.</td></tr></tbody>';return;}
-  const seasonMins=seasonMinutesByPlayer(season);
-  document.getElementById('tbl-md-mins').innerHTML=
-    '<thead><tr><th>Player</th><th>Pos</th><th>Age</th><th>Minutes</th><th>Season Minutes</th></tr></thead><tbody>'+
-    rows.map(d=>`<tr><td style="font-weight:700">${d.name}</td><td>${posBadge(d.pos||PM[d.name]||'?')}</td><td>${ageBadge(d.age||pAge(d.name)||'?')}</td><td style="font-family:var(--font);font-weight:800">${getMinsMd(d)||'—'}</td><td style="font-family:var(--font);font-weight:800">${seasonMins[d.name]||0}</td></tr>`).join('')+
-    '</tbody>';
-}
+// ── PLAYER MINUTES TRACKER ────────────────────────────────────────
+// Match minutes per player, built from MATCH_LIST (every MD-tagged GPS row),
+// split into one column per age group the player actually played for (a U15
+// who plays up gets U16 minutes). The Age filter narrows by the player's own
+// age group; "Protected Players" lists the players below, including any
+// who haven't played yet. Season minutes target: 2000 for protected players,
+// 3000 for everyone else.
+const MIN_TARGET=2000;
+const MIN_TARGET_DEFAULT=3000;
+function minTarget(name){return isProtected(name)?MIN_TARGET:MIN_TARGET_DEFAULT;}
+// Names must match the GPS sheet's spelling (case-insensitive).
+const PROTECTED_PLAYERS=[
+  'Jonathan David',
+  'Tyler Edwards',
+  'Cyro Barrios',
+  'Hassan Sakr',
+  'Omari Coke',
+  'Ben McCaughrain',
+  'Leo Andrade',
+  'Nikolas Kruczek',
+  'Lee Hall',
+  'Saul Luna',
+  'Cooper Finkle',
+  'Bradley Castro',
+  'Austin Gonzalez',
+  'Malachi Joseph',
+  'Pietro Lolos',
+  'Jeffry Mendez',
+  'Zane Baitinger',
+  'Oscar Andrade',
+  'Thiago Romany',
+  'Cary Smith',
+  'Eric Lodge',
+  'Lucas Ovies',
+  'David Rutkowski',
+  'Jacob Bradley',
+  'Isaac Rakovsky',
+  'Avery Rosado',
+  'Leo Dieujuste',
+  'Josh Munson',
+  'Jason Bori',
+  'Sean Baitinger',
+  'Alex Gomez',
+  'Troi Panniel',
+  'Rowan Martin',
+  'Caleb Simmons',
+  'Hinata Koyama',
+];
+const PROTECTED_SET=new Set(PROTECTED_PLAYERS.map(n=>n.trim().toLowerCase()));
+function isProtected(name){return PROTECTED_SET.has(String(name||'').trim().toLowerCase());}
+const MIN_AGES=['U18','U16','U15','U14','U13'];
 function getMinsMd(d){return+(d.mins)||0;}
-// Sums each player's match minutes across every MATCH_LIST entry in the
-// given season, pooling all age groups they played in — used for the
-// Season Minutes column, which is intentionally unaffected by the Age filter.
-function seasonMinutesByPlayer(season){
-  const out={};
-  MATCH_LIST.forEach(([d,inf])=>{
-    if(dateToSeason(d)!==season)return;
-    (inf.data||[]).forEach(x=>{if(x.name)out[x.name]=(out[x.name]||0)+getMinsMd(x);});
+function initMinutes(){renderMinutes();}
+function renderMinutes(){
+  const seasonF=document.getElementById('min-season')?.value||'all';
+  const ageF=document.getElementById('min-age')?.value||'all';
+  const posF=document.getElementById('min-pos')?.value||'all';
+  const sortBy=document.getElementById('min-sort')?.value||'name';
+  const prot=ageF==='protected';
+  const playerOk=name=>prot?isProtected(name):(ageF==='all'||pAge(name)===ageF);
+  // RTP rows can carry an MD tag (see sessionTypeMatches) but aren't match minutes.
+  const matches=MATCH_LIST
+    .map(([date,inf],idx)=>({idx,date,label:inf.label||'Match',rows:(inf.data||[]).filter(x=>x.name&&playerOk(x.name)&&!INDIVIDUAL_SESSION_LABELS.has(String(x.session||'').trim().toLowerCase()))}))
+    .filter(m=>inSeason(m.date,seasonF)&&m.rows.length)
+    .sort((a,b)=>parseDate(a.date)-parseDate(b.date));
+
+  // Match dropdown follows the Season/Age filters; keeps the current pick if still listed.
+  const mSel=document.getElementById('min-match');
+  const prev=mSel.value;
+  mSel.innerHTML='<option value="all">All Matches</option>'+[...matches].reverse().map(m=>`<option value="${m.idx}">${m.date} — ${m.label}</option>`).join('');
+  mSel.value=matches.some(m=>String(m.idx)===prev)?prev:'all';
+  const matchF=mSel.value==='all'?null:+mSel.value;
+
+  const P={};
+  const key=n=>String(n).trim().toLowerCase();
+  const mk=name=>P[key(name)]=P[key(name)]||{name,pos:PM[name]||'?',age:pAge(name),byAge:{},total:0,apps:0,unk:0,byMatch:{},last:null,thisMatch:undefined};
+  // Everyone in the selected season's GPS data (or on the protected list) is
+  // listed, even with 0 match minutes, so nobody silently drops off.
+  if(prot)PROTECTED_PLAYERS.forEach(mk);
+  else PLAYERS.forEach(p=>{if(playerOk(p)&&(GPS[p]||[]).some(s=>s.dist&&inSeason(s.date,seasonF)))mk(p);});
+  matches.forEach((m,mi)=>{
+    m.rows.forEach(x=>{
+      const p=P[key(x.name)]||mk(x.name);
+      if(p.name!==x.name){p.name=x.name;p.pos=PM[x.name]||p.pos;p.age=pAge(x.name)||p.age;}
+      if(p.pos==='?'&&x.pos)p.pos=x.pos;
+      // A GPS match row means the player featured; Session Length is often
+      // left blank in the sheet, so those count as an appearance with minutes
+      // not logged (null) rather than 0 minutes.
+      const mins=x.mins==null||x.mins===''?null:getMinsMd(x);
+      const had=p.byMatch[mi];
+      p.byMatch[mi]=mins==null?(had??null):(had||0)+mins;
+      if(had===undefined){p.apps++;if(mins==null)p.unk++;}
+      else if(had===null&&mins!=null)p.unk--;
+      p.total+=mins||0;
+      const team=x.age||p.age||'?';
+      p.byAge[team]=(p.byAge[team]||0)+(mins||0);
+      if(m.idx===matchF)p.thisMatch=mins==null?(p.thisMatch??null):(p.thisMatch||0)+mins;
+      p.last={date:m.date,mins:p.byMatch[mi]};
+    });
   });
-  return out;
+  let players=Object.values(P).filter(p=>posF==='all'||p.pos===posF);
+  if(matchF!=null)players=players.filter(p=>p.thisMatch!==undefined);
+  players.forEach(p=>{
+    p.full=Object.values(p.byMatch).filter(v=>v>=60).length;
+    const logged=p.apps-p.unk;
+    p.avg=logged?p.total/logged:0;
+  });
+  const sorters={name:(a,b)=>a.name.localeCompare(b.name),total:(a,b)=>b.total-a.total||a.name.localeCompare(b.name),apps:(a,b)=>b.apps-a.apps||b.total-a.total,avg:(a,b)=>b.avg-a.avg};
+  players.sort(sortBy!=='name'&&matchF!=null?(a,b)=>(b.thisMatch||0)-(a.thisMatch||0)||b.total-a.total:(sorters[sortBy]||sorters.name));
+
+  const totalMins=players.reduce((s,p)=>s+(matchF!=null?(p.thisMatch||0):p.total),0);
+  const played=players.filter(p=>p.apps>0).length;
+  const kpis=matchF!=null?[
+    {v:players.length,l:'Players Used'},
+    {v:Math.round(totalMins).toLocaleString(),l:'Total Minutes'},
+    {v:players.filter(p=>p.thisMatch>=60).length,l:'Players 60+ Min'},
+    {v:players.filter(p=>p.thisMatch!=null&&p.thisMatch<60).length,l:'Players Under 60 Min'},
+    {v:players.filter(p=>p.thisMatch==null).length,l:'Minutes Not Logged'},
+  ]:prot?[
+    {v:players.length,l:'Protected Players'},
+    {v:MIN_TARGET.toLocaleString(),l:'Season Target (min)'},
+    {v:players.length?Math.round(players.reduce((s,p)=>s+p.total,0)/players.length):0,l:'Avg Minutes / Player'},
+    {v:players.length?Math.round(players.reduce((s,p)=>s+Math.min(p.total/MIN_TARGET,1),0)/players.length*100)+'%':'0%',l:'Avg % of Target'},
+    {v:players.filter(p=>p.total>=MIN_TARGET).length,l:'Target Reached'},
+  ]:[
+    {v:matches.length,l:'Matches'},
+    {v:played,l:'Players Used'},
+    {v:Math.round(totalMins).toLocaleString(),l:'Total Minutes'},
+    {v:played?Math.round(totalMins/played):0,l:'Avg Minutes / Player'},
+    {v:players.filter(p=>p.total>=minTarget(p.name)).length,l:'Target Reached'},
+    {v:players.reduce((s,p)=>s+p.unk,0),l:'Apps with Minutes Not Logged'},
+  ];
+  document.getElementById('min-kpis').innerHTML=kpis.map(k=>`<div><div class="kv">${k.v}</div><div class="kl">${k.l}</div></div>`).join('');
+  document.getElementById('min-season-title').textContent=matchF!=null?'Match Minutes':prot?`Protected Players — ${MIN_TARGET.toLocaleString()} Minute Target`:'Season Minutes by Age Group';
+
+  const tblS=document.getElementById('tbl-min-season'),tblG=document.getElementById('tbl-min-grid');
+  if(!players.length){
+    const empty=`<tbody><tr><td style="color:#999">${prot&&!PROTECTED_PLAYERS.length?'No protected players set yet.':'No players for this selection.'}</td></tr></tbody>`;
+    tblS.innerHTML=empty;tblG.innerHTML=empty;return;
+  }
+  // Age-group columns: any team with minutes in view; the protected view
+  // always shows U18/U16/U15 so the layout stays fixed.
+  const ages=MIN_AGES.filter(a=>(prot&&['U18','U16','U15'].includes(a))||players.some(p=>p.byAge[a]));
+  const other=players.some(p=>Object.keys(p.byAge).some(a=>!MIN_AGES.includes(a)&&p.byAge[a]));
+  const num='font-family:var(--font);font-weight:800';
+  const c='text-align:center;';
+  const fmt=v=>+(+v).toFixed(1);
+  const mx=Math.max(...players.map(p=>p.total),1);
+  const bar=p=>{
+    const w=Math.min(p.total/minTarget(p.name)*100,100);
+    return`<td style="min-width:130px"><div style="position:relative;height:20px;background:#f3f3f3;border-radius:2px;overflow:hidden"><div style="position:absolute;inset:0 auto 0 0;width:${Math.max(w,p.total?1.5:0).toFixed(1)}%;background:linear-gradient(90deg,#d6d6d6,#333)"></div><span style="position:relative;display:block;${c}line-height:20px;${num};font-size:13px;color:#1a1a1a;text-shadow:0 0 3px #fff,0 0 3px #fff">${fmt(p.total)}</span></div></td>`;
+  };
+  // % target cell: red → amber → green, scaled against the best in view.
+  const topPct=Math.max(...players.map(p=>p.total/minTarget(p.name)),0.0001);
+  const pctBg=p=>{
+    const t=Math.min(p.total/minTarget(p.name)/topPct,1);
+    const lerp=(a,b,u)=>a.map((v,i)=>Math.round(v+(b[i]-v)*u));
+    const col=t<.5?lerp([244,204,204],[255,242,204],t*2):lerp([255,242,204],[217,234,211],(t-.5)*2);
+    return`rgb(${col})`;
+  };
+  const pname=p=>`${p.name}${!prot&&isProtected(p.name)?' <span class="badge" style="background:#cc000018;color:#cc0000;border:1px solid #cc000044">PROTECTED</span>':''}`;
+  tblS.innerHTML='<thead><tr><th>Player</th><th>Pos</th><th>Age</th>'+(matchF!=null?`<th style="${c}">This Match</th>`:'')+
+    ages.map(a=>`<th style="${c}">${a} Minutes</th>`).join('')+(other?`<th style="${c}">Other</th>`:'')+
+    `<th style="${c}">Total Minutes</th>`+(prot?`<th style="${c}">Gap to ${MIN_TARGET}</th>`:`<th style="${c}">Target</th><th style="${c}">Gap to Target</th>`)+`<th style="${c}">% Target</th>`+
+    `<th style="${c}">Apps</th><th style="${c}">60+ Min Apps</th><th style="${c}">Avg / App</th><th style="${c}">Mins Not Logged</th><th>Last Match</th></tr></thead><tbody>`+
+    players.map(p=>`<tr><td style="font-weight:700">${pname(p)}</td><td>${posBadge(p.pos)}</td><td>${ageBadge(p.age)}</td>`+
+      (matchF!=null?`<td style="${c}${num};color:#cc0000">${p.thisMatch??'—'}</td>`:'')+
+      ages.map(a=>`<td style="${c}${p.byAge[a]?num:'color:#bbb'}">${fmt(p.byAge[a]||0)}</td>`).join('')+
+      (other?`<td style="${c}">${fmt(Object.entries(p.byAge).filter(([a])=>!MIN_AGES.includes(a)).reduce((s,[,v])=>s+v,0))}</td>`:'')+
+      bar(p)+
+      (prot?'':`<td style="${c}color:#888">${minTarget(p.name)}</td>`)+
+      `<td style="${c}${num}">${fmt(Math.max(minTarget(p.name)-p.total,0))}</td><td style="${c}${num};background:${pctBg(p)}">${Math.round(p.total/minTarget(p.name)*100)}%</td>`+
+      `<td style="${c}">${p.apps}</td><td style="${c}">${p.full}</td><td style="${c}">${p.avg?Math.round(p.avg):'—'}</td><td style="${c}color:${p.unk?'#b36b00':'#bbb'}">${p.unk}</td>`+
+      `<td style="font-size:11px;color:#666">${p.last?`${p.last.date} · <b>${p.last.mins??'—'}${p.last.mins!=null?"'":''}</b>`:'—'}</td></tr>`).join('')+
+    '</tbody>';
+
+  // Grid: rows = players, cols = matches. Cells shaded by minutes played
+  // (90 = full red), · where the player didn't feature, ✓ where they played
+  // but minutes weren't logged. The selected match's column is outlined.
+  const sel=m=>m.idx===matchF?'outline:2px solid #1a1a1a;outline-offset:-2px;':'';
+  const head=matches.map(m=>`<th style="${c}font-size:9px;line-height:1.25;${sel(m)}" title="${m.label}">${m.date}<br><span style="font-weight:400;opacity:.85">${m.label}</span></th>`).join('');
+  tblG.innerHTML=matches.length?`<thead><tr><th style="position:sticky;left:0;z-index:1">Player</th>${head}<th style="${c}">Total</th></tr></thead><tbody>`+
+    players.map(p=>`<tr><td style="font-weight:700;position:sticky;left:0;background:#fff">${p.name}</td>${matches.map((m,mi)=>{
+      const v=p.byMatch[mi];
+      if(v===undefined)return`<td style="${c}color:#ccc;${sel(m)}">·</td>`;
+      if(v===null)return`<td style="${c}color:#b36b00;background:#fff4e0;${sel(m)}" title="Played — minutes not logged">✓</td>`;
+      const a=Math.min(v/90,1);
+      return`<td style="${c}${num};background:rgba(204,0,0,${(0.08+a*0.72).toFixed(2)});color:${a>0.55?'#fff':'#1a1a1a'};${sel(m)}">${fmt(v)}</td>`;
+    }).join('')}<td style="${c}${num};color:#cc0000">${fmt(p.total)}</td></tr>`).join('')+'</tbody>'
+    :'<tbody><tr><td style="color:#999">No matches for this selection.</td></tr></tbody>';
 }
 
 // ── TEAM/PER DAY ──────────────────────────────────────────────────
@@ -2802,12 +2995,17 @@ function renderRank(){
     const ex=key;
     ranked=Object.entries(RPM).map(([n,arr])=>{const a=bestPerDate(sf(arr.filter(r=>r.exercise===ex)),(a,b)=>(a.oneRM||0)>(b.oneRM||0)).filter(r=>fa(r.age));if(!a.length)return null;const b=[...a].sort((a,b)=>(b.oneRM||0)-(a.oneRM||0))[0];return{name:n,age:b.age,pos:PM[n]||'?',val:b.oneRM||0,date:b.date};}).filter(Boolean).filter(r=>r.val>0).sort((a,b)=>b.val-a.val).map((r,i)=>({...r,rank:i+1,str:r.val.toFixed(1)+' lb'}));
   }
+  ranked=ranked.filter(r=>!rankSpdExcluded(r.name)).map((r,i)=>({...r,rank:i+1}));
   if(posF!=='all')ranked=ranked.filter(r=>r.pos===posF);
   const mx=ranked[0]?.val||1;
   const M=['🥇','🥈','🥉'];
   document.getElementById('tbl-rank').innerHTML=`<thead><tr><th>#</th><th>Player</th><th>Age</th><th>Pos</th><th>Score</th><th style="min-width:120px">Bar</th><th>Date</th></tr></thead><tbody>`+
     ranked.map((r,i)=>{const pc=Math.min(r.lower?Math.max(10,100-Math.round(r.val/mx*50)):Math.round(r.val/mx*100),100);return`<tr><td><span class="rn ${i<3?'top':''}">${i<3?M[i]:i+1}</span></td><td style="font-weight:600">${r.name}</td><td>${ageBadge(r.age)}</td><td>${posBadge(r.pos)}</td><td style="font-family:var(--font);font-size:16px;font-weight:800;color:${i<3?'#cc0000':'#1a1a1a'}">${r.str}</td><td><div class="rb-w"><div class="rb" style="width:${pc}%"></div><span style="font-size:10px;color:#888">${r.val?.toFixed?.(1)||r.val}</span></div></td><td style="color:#888;font-size:12px">${r.date||'—'}</td></tr>`;}).join('')+'</tbody>';
 }
+
+// Players left off the Rankings and Speed Exposure pages (matched case-insensitively)
+const RANK_SPD_EXCLUDE=new Set(['Zico Marshall-Rutty','Salvatore Brancatelli','Estifanos Thompson','Carlos Palma','Nicholas Gentile','Ricardo Vasquez','Jediah David'].map(n=>n.toLowerCase()));
+function rankSpdExcluded(name){return RANK_SPD_EXCLUDE.has(String(name||'').trim().toLowerCase());}
 
 // ── SPEED EXPOSURE ────────────────────────────────────────────────
 // Flags players who haven't recently touched 90% of their all-time top
@@ -2835,7 +3033,7 @@ function renderSpeedExp(){
   const sortBy=document.getElementById('spd-sort').value;
   const seasonF=document.getElementById('spd-season')?.value||'all';
   const now=new Date();
-  let rows=Object.entries(GPS).map(([name,arr])=>{
+  let rows=Object.entries(GPS).filter(([name])=>!rankSpdExcluded(name)).map(([name,arr])=>{
     const sessions=(arr||[]).filter(s=>s.dist&&s.maxspd!=null&&s.maxspd>0&&inSeason(s.date,seasonF));
     if(!sessions.length)return null;
     const age=pAge(name);
