@@ -1432,6 +1432,8 @@ const PROTECTED_SET=new Set(PROTECTED_PLAYERS.map(n=>n.trim().toLowerCase()));
 function isProtected(name){return PROTECTED_SET.has(String(name||'').trim().toLowerCase());}
 const MIN_AGES=['U18','U16','U15','U14','U13'];
 function getMinsMd(d){return+(d.mins)||0;}
+// Strips a trailing opponent age group: "Match vs DUSC U16" → "Match vs DUSC".
+function matchBaseLabel(label){return String(label||'').replace(/\s*[-(]?\s*U-?\d{1,2}s?(\s*\/\s*U?-?\d{1,2}s?)*\)?\s*$/i,'').trim()||String(label||'').trim();}
 function initMinutes(){renderMinutes();}
 function renderMinutes(){
   const seasonF=document.getElementById('min-season')?.value||'all';
@@ -1441,9 +1443,23 @@ function renderMinutes(){
   const prot=ageF==='protected';
   const playerOk=name=>prot?isProtected(name):(ageF==='all'||pAge(name)===ageF);
   // RTP rows can carry an MD tag (see sessionTypeMatches) but aren't match minutes.
-  const matches=MATCH_LIST
-    .map(([date,inf],idx)=>({idx,date,label:inf.label||'Match',rows:(inf.data||[]).filter(x=>x.name&&playerOk(x.name)&&!INDIVIDUAL_SESSION_LABELS.has(String(x.session||'').trim().toLowerCase()))}))
-    .filter(m=>inSeason(m.date,seasonF)&&m.rows.length)
+  // Same opponent on the same date is one match, whatever age suffix the
+  // label carries ("Match vs DUSC", "Match vs DUSC U16", "... U17" all merge),
+  // or a trailing FC/SC ("Match at Toronto FC" = "Match at Toronto").
+  const byGame={};
+  MATCH_LIST.forEach(([date,inf])=>{
+    if(!inSeason(date,seasonF))return;
+    const rows=(inf.data||[]).filter(x=>x.name&&playerOk(x.name)&&!INDIVIDUAL_SESSION_LABELS.has(String(x.session||'').trim().toLowerCase()));
+    if(!rows.length)return;
+    const label=inf.label||'Match';
+    const base=matchBaseLabel(label);
+    const idx=dayKey(parseDate(date))+'|'+base.toLowerCase().replace(/\s+(fc|sc)$/,'');
+    const g=byGame[idx]=byGame[idx]||{idx,date,label:base,labels:new Set(),rows:[]};
+    if(base.length<g.label.length)g.label=base;
+    g.labels.add(label);g.rows.push(...rows);
+  });
+  const matches=Object.values(byGame)
+    .map(g=>({...g,label:g.labels.size===1?[...g.labels][0]:g.label}))
     .sort((a,b)=>parseDate(a.date)-parseDate(b.date));
 
   // Match dropdown follows the Season/Age filters; keeps the current pick if still listed.
@@ -1451,7 +1467,7 @@ function renderMinutes(){
   const prev=mSel.value;
   mSel.innerHTML='<option value="all">All Matches</option>'+[...matches].reverse().map(m=>`<option value="${m.idx}">${m.date} — ${m.label}</option>`).join('');
   mSel.value=matches.some(m=>String(m.idx)===prev)?prev:'all';
-  const matchF=mSel.value==='all'?null:+mSel.value;
+  const matchF=mSel.value==='all'?null:mSel.value;
 
   const P={};
   const key=n=>String(n).trim().toLowerCase();
