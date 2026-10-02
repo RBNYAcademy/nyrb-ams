@@ -10,7 +10,20 @@ async function fetchSheet(tabName) {
     throw new Error(`Failed to fetch sheet "${tabName}": ${res.status} ${res.statusText}`);
   }
   const text = await res.text();
-  return parseCSV(text);
+  return parseCSV(text).filter(row => !isRemovedPlayerRow(row));
+}
+
+// Players removed from the whole dashboard: any row in any tab that names
+// them is dropped before the API handlers see it. Matched case-insensitively
+// on every word of the name across the row's text cells, so "Last, First"
+// and split GivenName / FamilyName columns are caught too.
+const REMOVED_PLAYERS = [
+  'Zico Marshall-Rutty',
+].map(n => n.toLowerCase().split(/\s+/));
+
+function isRemovedPlayerRow(row) {
+  const text = Object.values(row).filter(v => typeof v === 'string').join(' | ').toLowerCase();
+  return REMOVED_PLAYERS.some(words => words.every(w => text.includes(w)));
 }
 
 function parseCSV(text) {

@@ -1178,7 +1178,25 @@ function populateDropdown(id){
   [...PLAYERS].sort((a,b)=>a.localeCompare(b))
     .forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=`${p} (${PM[p]||'?'})`;sel.appendChild(o);});
 }
-function pAge(p){return AM[p]||(CMJ[p]||[])[0]?.age||(NB[p]||[])[0]?.age||(VALD[p]||[])[0]?.age||null;}
+// A player's age group = the team most of their GPS sessions (games or
+// practices) are with, in `season` or else their latest season. The sheet's
+// last row (AM) is only a fallback: one play-up session would move a U15 to U16.
+let _ageCache={},_ageCacheFor=null;
+function gpsAge(p,season){
+  if(_ageCacheFor!==GPS){_ageCache={};_ageCacheFor=GPS;}
+  const k=p+'|'+(season||'');
+  if(k in _ageCache)return _ageCache[k];
+  const all=(GPS[p]||[]).filter(s=>s.age&&s.date);
+  const sn=season&&season!=='all'?season:dateToSeason(all[all.length-1]?.date);
+  const n={};
+  all.forEach(s=>{if(dateToSeason(s.date)===sn)n[s.age]=(n[s.age]||0)+1;});
+  const top=Object.entries(n).sort((a,b)=>b[1]-a[1])[0];
+  return _ageCache[k]=top?String(top[0]).trim():null;
+}
+// Manual pins for players who split time across teams. Names must match the
+// GPS sheet's spelling (case-insensitive). Remove when they move up for good.
+const AGE_OVERRIDE={'aaron judka':'U15','ben mccaughrain':'U15'};
+function pAge(p,season){return AGE_OVERRIDE[String(p||'').trim().toLowerCase()]||gpsAge(p,season)||gpsAge(p)||AM[p]||(CMJ[p]||[])[0]?.age||(NB[p]||[])[0]?.age||(VALD[p]||[])[0]?.age||null;}
 
 // ── DATE FILTER ───────────────────────────────────────────────────
 function parseDate(s){
@@ -1441,7 +1459,9 @@ function renderMinutes(){
   const posF=document.getElementById('min-pos')?.value||'all';
   const sortBy=document.getElementById('min-sort')?.value||'name';
   const prot=ageF==='protected';
-  const playerOk=name=>prot?isProtected(name):(ageF==='all'||pAge(name)===ageF);
+  // Own age group follows the selected season (see gpsAge).
+  const ownAge=name=>pAge(name,seasonF);
+  const playerOk=name=>prot?isProtected(name):(ageF==='all'||ownAge(name)===ageF);
   // RTP rows can carry an MD tag (see sessionTypeMatches) but aren't match minutes.
   // Same opponent on the same date is one match, whatever age suffix the
   // label carries ("Match vs DUSC", "Match vs DUSC U16", "... U17" all merge),
@@ -1471,7 +1491,7 @@ function renderMinutes(){
 
   const P={};
   const key=n=>String(n).trim().toLowerCase();
-  const mk=name=>P[key(name)]=P[key(name)]||{name,pos:PM[name]||'?',age:pAge(name),byAge:{},total:0,apps:0,unk:0,byMatch:{},last:null,thisMatch:undefined};
+  const mk=name=>P[key(name)]=P[key(name)]||{name,pos:PM[name]||'?',age:ownAge(name),byAge:{},total:0,apps:0,unk:0,byMatch:{},last:null,thisMatch:undefined};
   // Everyone in the selected season's GPS data (or on the protected list) is
   // listed, even with 0 match minutes, so nobody silently drops off.
   if(prot)PROTECTED_PLAYERS.forEach(mk);
@@ -1479,7 +1499,7 @@ function renderMinutes(){
   matches.forEach((m,mi)=>{
     m.rows.forEach(x=>{
       const p=P[key(x.name)]||mk(x.name);
-      if(p.name!==x.name){p.name=x.name;p.pos=PM[x.name]||p.pos;p.age=pAge(x.name)||p.age;}
+      if(p.name!==x.name){p.name=x.name;p.pos=PM[x.name]||p.pos;p.age=ownAge(x.name)||p.age;}
       if(p.pos==='?'&&x.pos)p.pos=x.pos;
       // A GPS match row means the player featured; Session Length is often
       // left blank in the sheet, so those count as an appearance with minutes
