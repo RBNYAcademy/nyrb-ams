@@ -1275,10 +1275,11 @@ function initDaily(){
   const ageAll=activePills.length===0||activePills.includes('all');
   let data=[];
   PLAYERS.forEach(p=>{
-    const sessions=(GPS[p]||[]).filter(s=>s.date===selDate&&s.dist&&sessionTypeMatches(s,sessType));
+    // Age filter = the team the player was with that day (the row's own Age
+    // Group), not their usual age group — a U15 training up shows under U16.
+    const sessions=(GPS[p]||[]).filter(s=>s.date===selDate&&s.dist&&sessionTypeMatches(s,sessType)&&(ageAll||activePills.includes(String(s.age||'').trim()||pAge(p))));
     if(sessions.length)data.push({...combineDaySessions(sessions),player:p,pos:PM[p]||'MF'});
   });
-  if(!ageAll)data=data.filter(d=>activePills.includes(pAge(d.player)));
   if(pos!=='all')data=data.filter(d=>d.pos===pos);
   if(!data.length){data=Object.values(LATEST).filter(d=>d.dist&&sessionTypeMatches(d,sessType));if(pos!=='all')data=data.filter(d=>d.pos===pos);}
   data=data.filter(d=>d.dist).sort((a,b)=>b.dist-a.dist);
