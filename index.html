@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -257,7 +258,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
   <div class="main">
     <div class="ctrl-row">
       <span class="cl">Season:</span><select class="ctrl" id="min-season" onchange="renderMinutes()"><option value="all">All Seasons</option></select>
-      <span class="cl">Age:</span><select class="ctrl" id="min-age" onchange="renderMinutes()"><option value="all">All Players</option><option value="protected">Protected Players</option><option value="U18">U18</option><option value="U16">U16</option><option value="U15">U15</option><option value="U14">U14</option><option value="U13">U13</option></select>
+      <span class="cl">Birth Year:</span><select class="ctrl" id="min-by" onchange="renderMinutes()"><option value="all">All Players</option><option value="protected">Protected Players</option></select>
       <span class="cl">Match:</span><select class="ctrl" id="min-match" onchange="renderMinutes()"><option value="all">All Matches</option></select>
       <span class="cl">Pos:</span><select class="ctrl" id="min-pos" onchange="renderMinutes()"><option value="all">All</option><option value="CB">CB</option><option value="FW">FW</option><option value="FB">FB</option><option value="GK">GK</option><option value="MF">MF</option></select>
       <span class="cl">Sort by:</span>
@@ -323,7 +324,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
 <!-- PLAYER/DAY -->
 <div class="page" id="page-playerday">
   <div class="main">
-    <div class="ctrl-row"><span class="cl">Player:</span><select class="ctrl" id="pd-player"></select><span class="cl">Season:</span><select class="ctrl" id="pd-season" onchange="renderPlayerDay()"><option value="all">All Seasons</option></select><span class="cl">Sessions:</span><select class="ctrl" id="pd-n"><option value="7">Last 7 days</option><option value="10">Last 10</option><option value="20">Last 20</option><option value="30">Last 30</option></select><button class="export-btn" onclick="exportPDF('page-playerday')" style="margin-left:auto">⬇ Export PDF</button></div>
+    <div class="ctrl-row"><span class="cl">Player:</span><select class="ctrl" id="pd-player"></select><span class="cl">Season:</span><select class="ctrl" id="pd-season" onchange="renderPlayerDay()"><option value="all">All Seasons</option></select><span class="cl">Sessions:</span><select class="ctrl" id="pd-n"><option value="7">Last 7 days</option><option value="10">Last 10</option><option value="20">Last 20</option><option value="30">Last 30</option></select><button class="export-btn" onclick="exportPlayerDayXLSX()" style="margin-left:auto">⬇ Export Excel</button><button class="export-btn" onclick="exportPDF('page-playerday')">⬇ Export PDF</button></div>
     <div class="pg g2 sg"><div class="panel"><div class="pt">Total Distance</div><div class="cb"><canvas id="c-pd-dist"></canvas></div></div><div class="panel"><div class="pt">Distance Per Minute</div><div class="cb"><canvas id="c-pd-dpm"></canvas></div></div></div>
     <div class="pg g2 sg"><div class="panel"><div class="pt">HSR Distance</div><div class="cb"><canvas id="c-pd-hsr"></canvas></div></div><div class="panel"><div class="pt">VHSR Distance</div><div class="cb"><canvas id="c-pd-vhsr"></canvas></div></div></div>
     <div class="pg g2 sg"><div class="panel"><div class="pt">Sprint Distance</div><div class="cb"><canvas id="c-pd-sprint"></canvas></div></div><div class="panel"><div class="pt">Explosive Distance</div><div class="cb"><canvas id="c-pd-expl"></canvas></div></div></div>
@@ -1450,19 +1451,38 @@ const PROTECTED_PLAYERS=[
 const PROTECTED_SET=new Set(PROTECTED_PLAYERS.map(n=>n.trim().toLowerCase()));
 function isProtected(name){return PROTECTED_SET.has(String(name||'').trim().toLowerCase());}
 const MIN_AGES=['U18','U16','U15','U14','U13'];
+// Left off the Minutes Tracker only (still on every other tab). Names must
+// match the GPS sheet's spelling (case-insensitive).
+const MIN_EXCLUDE=new Set(['Carlos Palma','Estifanos Thompson'].map(n=>n.toLowerCase()));
+function minExcluded(name){return MIN_EXCLUDE.has(String(name||'').trim().toLowerCase());}
 function getMinsMd(d){return+(d.mins)||0;}
 // Strips a trailing opponent age group: "Match vs DUSC U16" → "Match vs DUSC".
 function matchBaseLabel(label){return String(label||'').replace(/\s*[-(]?\s*U-?\d{1,2}s?(\s*\/\s*U?-?\d{1,2}s?)*\)?\s*$/i,'').trim()||String(label||'').trim();}
+// Birth year from the PHV sheet's DOB (the sheet with DOBs), matched by name.
+function minBirthYear(name){
+  const k=String(name||'').trim().toLowerCase();
+  const e=Object.entries(PHV_DATA).find(([n])=>n.trim().toLowerCase()===k);
+  const dob=e&&[...e[1]].reverse().find(r=>r.dob)?.dob;
+  return birthYear(dob);
+}
 function initMinutes(){renderMinutes();}
 function renderMinutes(){
   const seasonF=document.getElementById('min-season')?.value||'all';
-  const ageF=document.getElementById('min-age')?.value||'all';
+  // Birth Year dropdown: years of everyone in the selected season's GPS data.
+  // "No DOB" catches players missing from the PHV sheet so nobody drops off.
+  const bySel=document.getElementById('min-by'),byPrev=bySel?.value||'all';
+  const yrs=new Set();let noDob=false;
+  PLAYERS.forEach(p=>{if(minExcluded(p)||!(GPS[p]||[]).some(s=>s.dist&&inSeason(s.date,seasonF)))return;const y=minBirthYear(p);if(y)yrs.add(y);else noDob=true;});
+  bySel.innerHTML='<option value="all">All Players</option><option value="protected">Protected Players</option>'+[...yrs].sort((a,b)=>a-b).map(y=>`<option value="${y}">${y}</option>`).join('')+(noDob?'<option value="none">No DOB</option>':'');
+  bySel.value=[...bySel.options].some(o=>o.value===byPrev)?byPrev:'all';
+  const byF=document.getElementById('min-by')?.value||'all';
   const posF=document.getElementById('min-pos')?.value||'all';
   const sortBy=document.getElementById('min-sort')?.value||'name';
-  const prot=ageF==='protected';
+  const prot=byF==='protected';
   // Own age group follows the selected season (see gpsAge).
   const ownAge=name=>pAge(name,seasonF);
-  const playerOk=name=>prot?isProtected(name):(ageF==='all'||ownAge(name)===ageF);
+  const byOk=name=>{if(byF==='all')return true;const y=minBirthYear(name);return byF==='none'?!y:String(y)===byF;};
+  const playerOk=name=>!minExcluded(name)&&(prot?isProtected(name):byOk(name));
   // RTP rows can carry an MD tag (see sessionTypeMatches) but aren't match minutes.
   // Same opponent on the same date is one match, whatever age suffix the
   // label carries ("Match vs DUSC", "Match vs DUSC U16", "... U17" all merge),
@@ -1483,7 +1503,7 @@ function renderMinutes(){
     .map(g=>({...g,label:g.labels.size===1?[...g.labels][0]:g.label}))
     .sort((a,b)=>parseDate(a.date)-parseDate(b.date));
 
-  // Match dropdown follows the Season/Age filters; keeps the current pick if still listed.
+  // Match dropdown follows the Season/Birth Year filters; keeps the current pick if still listed.
   const mSel=document.getElementById('min-match');
   const prev=mSel.value;
   mSel.innerHTML='<option value="all">All Matches</option>'+[...matches].reverse().map(m=>`<option value="${m.idx}">${m.date} — ${m.label}</option>`).join('');
@@ -1578,11 +1598,11 @@ function renderMinutes(){
     return`rgb(${col})`;
   };
   const pname=p=>`${p.name}${!prot&&isProtected(p.name)?' <span class="badge" style="background:#cc000018;color:#cc0000;border:1px solid #cc000044">PROTECTED</span>':''}`;
-  tblS.innerHTML='<thead><tr><th>Player</th><th>Pos</th><th>Age</th>'+(matchF!=null?`<th style="${c}">This Match</th>`:'')+
+  tblS.innerHTML='<thead><tr><th>Player</th><th>Pos</th><th>Age</th><th style="${c}">Birth Year</th>'+(matchF!=null?`<th style="${c}">This Match</th>`:'')+
     ages.map(a=>`<th style="${c}">${a} Minutes</th>`).join('')+(other?`<th style="${c}">Other</th>`:'')+
     `<th style="${c}">Total Minutes</th>`+(prot?`<th style="${c}">Gap to ${MIN_TARGET}</th>`:`<th style="${c}">Target</th><th style="${c}">Gap to Target</th>`)+`<th style="${c}">% Target</th>`+
     `<th style="${c}">Apps</th><th style="${c}">60+ Min Apps</th><th style="${c}">Avg / App</th><th style="${c}">Mins Not Logged</th><th>Last Match</th></tr></thead><tbody>`+
-    players.map(p=>`<tr><td style="font-weight:700">${pname(p)}</td><td>${posBadge(p.pos)}</td><td>${ageBadge(p.age)}</td>`+
+    players.map(p=>`<tr><td style="font-weight:700">${pname(p)}</td><td>${posBadge(p.pos)}</td><td>${ageBadge(p.age)}</td><td style="${c}">${minBirthYear(p.name)||'—'}</td>`+
       (matchF!=null?`<td style="${c}${num};color:#cc0000">${p.thisMatch??'—'}</td>`:'')+
       ages.map(a=>`<td style="${c}${p.byAge[a]?num:'color:#bbb'}">${fmt(p.byAge[a]||0)}</td>`).join('')+
       (other?`<td style="${c}">${fmt(Object.entries(p.byAge).filter(([a])=>!MIN_AGES.includes(a)).reduce((s,[,v])=>s+v,0))}</td>`:'')+
@@ -1742,8 +1762,30 @@ function renderPlayerDay(){
   let sessions=Object.keys(byDate).sort((a,b)=>parseDate(a)-parseDate(b)).map(d=>combineDaySessions(byDate[d]));
   if(nVal==='7'){const cutoff=new Date();cutoff.setDate(cutoff.getDate()-7);sessions=sessions.filter(s=>new Date(s.date)>=cutoff);}
   else sessions=sessions.slice(-+nVal);
+  // Kept for the Excel export: the days shown plus their raw sessions.
+  const shown=new Set(sessions.map(s=>dayKey(parseDate(s.date))));
+  PD_EXPORT={player,days:sessions,raw:raw.filter(s=>shown.has(dayKey(parseDate(s.date))))};
   const labels=sessions.map(s=>{const p=parseDate(s.date);return`${p.getMonth()+1}/${p.getDate()}`;});
   METRICS.forEach(k=>{mkBar('c-pd-'+k,labels,sessions.map(s=>s[k]??null),MC[k]?.c||'#cc0000',MC[k]?.bg);});
+}
+
+// Excel export of every GPS metric for the Player/Day selection: one sheet of
+// the daily values the charts plot, one of each individual session.
+let PD_EXPORT=null;
+const PD_COLS=[['date','Date'],['session','Session Type'],['md','MD'],['participation','Participation'],['pos','Position'],['age','Age Group'],['mins','Session Length (Mins)'],
+  ['dist','Distance (m)'],['dpm','Distance / min (m)'],['hsr','HSR Distance (m)'],['vhsr','VHSR Distance (m)'],['sprint','Sprint Distance (m)'],['expl','Explosive Distance (m)'],
+  ['maxspd','Max Speed (m/s)'],['acc','Accelerations (high)'],['dec','Decelerations (high)'],['hml','HMLD (m)']];
+function exportPlayerDayXLSX(){
+  if(typeof XLSX==='undefined'){alert('Excel library failed to load — check your connection and try again.');return;}
+  const d=PD_EXPORT;
+  if(!d||!d.days.length){alert('No sessions in this selection to export.');return;}
+  const toRows=list=>[PD_COLS.map(c=>c[1]),...list.map(s=>PD_COLS.map(([k])=>s[k]??''))];
+  const wb=XLSX.utils.book_new();
+  const add=(name,list)=>{const ws=XLSX.utils.aoa_to_sheet(toRows(list));ws['!cols']=PD_COLS.map(([,h])=>({wch:Math.max(10,h.length+2)}));XLSX.utils.book_append_sheet(wb,ws,name);};
+  add('Daily',d.days);
+  add('Sessions',d.raw);
+  const iso=s=>{const p=parseDate(s.date);return`${p.getFullYear()}-${String(p.getMonth()+1).padStart(2,'0')}-${String(p.getDate()).padStart(2,'0')}`;};
+  XLSX.writeFile(wb,`${d.player.replace(/[^\w\- ]+/g,'')} GPS ${iso(d.days[0])} to ${iso(d.days[d.days.length-1])}.xlsx`);
 }
 
 // ── PLAYER/WEEK (playerweek) ──────────────────────────────────────
