@@ -19,6 +19,9 @@ async function fetchSheet(tabName) {
 // and split GivenName / FamilyName columns are caught too.
 const REMOVED_PLAYERS = [
   'Zico Marshall-Rutty',
+  'Devin Padelford',
+  'Babeto Marshall-Rutty',
+  'Ruben Makon',
 ].map(n => n.toLowerCase().split(/\s+/));
 
 function isRemovedPlayerRow(row) {
