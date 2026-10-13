@@ -1250,6 +1250,7 @@ function sessionTypeMatches(d,type){
   // (sheet also has Pre-Season, RTP, Testing, Conditioning, Rehab, etc.)
   return !isMatch;
 }
+const isRTPSession=d=>String(d.session||'').trim().toLowerCase()==='rtp';
 // A player can have more than one GPS row on the same date (e.g. a separate
 // AM Training block and a PM IDP block) — sum the cumulative metrics, take
 // the peak for max speed, and recompute dist/min from the totals, so the
@@ -1279,14 +1280,18 @@ function initDaily(){
     // Age filter = the team the player was with that day (the row's own Age
     // Group), not their usual age group — a U15 training up shows under U16.
     const sessions=(GPS[p]||[]).filter(s=>s.date===selDate&&s.dist&&sessionTypeMatches(s,sessType)&&(ageAll||activePills.includes(String(s.age||'').trim()||pAge(p))));
-    if(sessions.length)data.push({...combineDaySessions(sessions),player:p,pos:PM[p]||'MF'});
+    // RTP rows still show in the charts but are left out of the KPI averages,
+    // so the averages are recomputed from the player's non-RTP sessions only.
+    const nonRTP=sessions.filter(s=>!isRTPSession(s));
+    if(sessions.length)data.push({...combineDaySessions(sessions),player:p,pos:PM[p]||'MF',kpiRow:nonRTP.length?combineDaySessions(nonRTP):null});
   });
   if(pos!=='all')data=data.filter(d=>d.pos===pos);
   if(!data.length){data=Object.values(LATEST).filter(d=>d.dist&&sessionTypeMatches(d,sessType));if(pos!=='all')data=data.filter(d=>d.pos===pos);}
   data=data.filter(d=>d.dist).sort((a,b)=>b.dist-a.dist);
   const kpis=[{k:'dist',l:'Avg Distance (m)'},{k:'dpm',l:'Avg Dist/Min'},{k:'hsr',l:'Avg HSR'},{k:'vhsr',l:'Avg VHSR'},{k:'sprint',l:'Avg Sprint'},{k:'expl',l:'Avg Explosive'},{k:'acc',l:'Avg Accels'},{k:'dec',l:'Avg Decels'}];
   // GK excluded from the blended average unless explicitly selected via the position filter.
-  let kpiData=pos==='all'?data.filter(d=>d.pos!=='GK'):data;
+  let kpiData=(pos==='all'?data.filter(d=>d.pos!=='GK'):data)
+    .map(d=>'kpiRow' in d?d.kpiRow:(isRTPSession(d)?null:d)).filter(Boolean);
   // Averages only reflect players who participated fully — partial/modified participation is excluded. Session type is already applied above.
   kpiData=kpiData.filter(d=>String(d.participation||'').trim().toLowerCase()==='full');
   document.getElementById('daily-kpis').innerHTML=kpis.map(({k,l})=>`<div><div class="kv">${avg(kpiData.map(d=>d[k]))}</div><div class="kl">${l}</div></div>`).join('');
