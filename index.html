@@ -1250,6 +1250,8 @@ function sessionTypeMatches(d,type){
   // (sheet also has Pre-Season, RTP, Testing, Conditioning, Rehab, etc.)
   return !isMatch;
 }
+// RTP (return-to-play) sessions are left out of every average on the
+// dashboard — they still show as individual bars/rows, just not in the means.
 const isRTPSession=d=>String(d.session||'').trim().toLowerCase()==='rtp';
 // A player can have more than one GPS row on the same date (e.g. a separate
 // AM Training block and a PM IDP block) — sum the cumulative metrics, take
@@ -1331,7 +1333,7 @@ function renderGauges(idx){
   const lf=document.getElementById('md-load').value;
   const getMins=d=>+(d.mins)||0;
   const ageF=document.getElementById('md-age')?.value||'all';
-  let mdData=(info.data||[]).filter(d=>d.dist&&d.pos!=='GK'&&(ageF==='all'||d.age===ageF));
+  let mdData=(info.data||[]).filter(d=>d.dist&&d.pos!=='GK'&&!isRTPSession(d)&&(ageF==='all'||d.age===ageF));
   if(lf==='full')mdData=mdData.filter(d=>getMins(d)>=60);
   else if(lf==='under')mdData=mdData.filter(d=>{const m=getMins(d);return m>0&&m<60;});
   const weighted=document.getElementById('md-view')?.value==='weighted';
@@ -1344,7 +1346,7 @@ function renderGauges(idx){
     return+(rows.reduce((s,d)=>s+d[k]*getMins(d),0)/rows.reduce((s,d)=>s+getMins(d),0)).toFixed(1);
   };
   const seasonData=seasonMatches.flatMap(([,inf])=>{
-    let d=(inf.data||[]).filter(x=>x.dist&&x.pos!=='GK'&&(ageF==='all'||x.age===ageF));
+    let d=(inf.data||[]).filter(x=>x.dist&&x.pos!=='GK'&&!isRTPSession(x)&&(ageF==='all'||x.age===ageF));
     if(lf==='full')d=d.filter(x=>getMins(x)>=60);
     else if(lf==='under')d=d.filter(x=>{const m=getMins(x);return m>0&&m<60;});
     return d;
@@ -1365,7 +1367,7 @@ function renderGauges(idx){
     const cur=+teamAvg(mdData,m);
     const sAvg=+teamAvg(seasonData,m);
     const perMatchVals=seasonMatches.map(([,inf])=>{
-      let d=(inf.data||[]).filter(x=>x.dist&&x.pos!=='GK');
+      let d=(inf.data||[]).filter(x=>x.dist&&x.pos!=='GK'&&!isRTPSession(x));
       if(lf==='full')d=d.filter(x=>getMins(x)>=60);
       else if(lf==='under')d=d.filter(x=>{const m=getMins(x);return m>0&&m<60;});
       return matchAvg(d,m);
@@ -1648,7 +1650,7 @@ function renderTeamPerDay(){
   const byPlayerDate={};
   eligible.forEach(p=>{
     const byDate={};
-    (GPS[p]||[]).forEach(s=>{if(s.dist&&s.date&&inSeason(s.date,seasonF)){const nd=dayKey(parseDate(s.date));(byDate[nd]=byDate[nd]||[]).push(s);}});
+    (GPS[p]||[]).forEach(s=>{if(s.dist&&s.date&&inSeason(s.date,seasonF)&&!(aggF==='avg'&&isRTPSession(s))){const nd=dayKey(parseDate(s.date));(byDate[nd]=byDate[nd]||[]).push(s);}});
     byPlayerDate[p]={};
     Object.keys(byDate).forEach(d=>{byPlayerDate[p][d]=combineDaySessions(byDate[d]);});
   });
@@ -1693,6 +1695,8 @@ function renderTeamWeek(){
       twByPlayerDate.byPlayerDate[p]={};
       Object.keys(byDate).forEach(d=>{
         const c=combineDaySessions(byDate[d]);
+        const nonRTP=byDate[d].filter(s=>!isRTPSession(s));
+        c.noRTP=nonRTP.length?combineDaySessions(nonRTP):null;
         twByPlayerDate.byPlayerDate[p][d]=c;
         twByPlayerDate.seen.add(`${+dateToSeason(d).slice(0,4)}-W${String(c.week).padStart(2,'0')}`);
       });
@@ -1731,14 +1735,17 @@ function renderTeamWeek(){
       // Sum = grand total of every player's every day in the week.
       // Avg = each day's team average within the week, summed across days.
       // maxspd always uses a true weekly mean instead (see note above).
+      // Averages (and the maxspd mean) leave out RTP sessions; Sum keeps them.
+      const noRTP=aggF==='avg'||k==='maxspd';
       vals=wkeys.map(wk=>{
         const wkYear=+wk.slice(0,4);
         const wkNum=+wk.slice(6);
         const dayData={};
         twByPlayerDate.eligible.forEach(p=>{
           Object.keys(twByPlayerDate.byPlayerDate[p]).forEach(d=>{
-            const c=twByPlayerDate.byPlayerDate[p][d];
-            if(c.week!==wkNum||+dateToSeason(d).slice(0,4)!==wkYear||c[k]==null)return;
+            const full=twByPlayerDate.byPlayerDate[p][d];
+            const c=noRTP?full.noRTP:full;
+            if(!c||full.week!==wkNum||+dateToSeason(d).slice(0,4)!==wkYear||c[k]==null)return;
             (dayData[d]=dayData[d]||[]).push(c[k]);
           });
         });
@@ -1805,7 +1812,7 @@ function renderPlayerWeek(){
     if(s.week==null)return;
     const wk=`${dateToSeason(s.date).slice(0,4)}-W${String(s.week).padStart(2,'0')}`;
     if(!weekly[wk])weekly[wk]={};
-    METRICS.forEach(k=>{if(s[k]!=null){if(!weekly[wk][k])weekly[wk][k]=[];weekly[wk][k].push(s[k]);}});
+    METRICS.forEach(k=>{if(s[k]!=null&&!(k==='maxspd'&&isRTPSession(s))){if(!weekly[wk][k])weekly[wk][k]=[];weekly[wk][k].push(s[k]);}});
   });
   let wkeys=Object.keys(weekly).sort();
   if(nVal!=='all')wkeys=wkeys.slice(-+nVal);
@@ -1873,7 +1880,11 @@ function lmPlayerDays(p){
     const ss=byDay[key];
     const md=(ss.find(s=>s.md&&String(s.md).trim()!=='IDP')||ss.find(s=>s.md)||{}).md;
     const part=ss.some(s=>String(s.participation||'').trim()==='Full')?'Full':(String(ss[0].participation||'').trim()||null);
-    return{key,date:ss[0].date,md:md?String(md).trim():null,part,load:combineDaySessions(ss)};
+    // base = the day's load without RTP sessions, used when this day feeds
+    // another day's 28-day / MD+/- average.
+    const nonRTP=ss.filter(s=>!isRTPSession(s));
+    const basePart=nonRTP.some(s=>String(s.participation||'').trim()==='Full')?'Full':null;
+    return{key,date:ss[0].date,md:md?String(md).trim():null,part,basePart,load:combineDaySessions(ss),base:nonRTP.length?combineDaySessions(nonRTP):null};
   });
 }
 function lmZ(days,idx,k){
@@ -1881,7 +1892,7 @@ function lmZ(days,idx,k){
   if(cur==null)return null;
   const[y,m,d]=days[idx].key.split('-').map(Number);
   const lowKey=dayKey(new Date(y,m-1,d-28));
-  const vs=days.slice(0,idx).filter(x=>x.key>=lowKey).map(x=>x.load[k]).filter(v=>v!=null);
+  const vs=days.slice(0,idx).filter(x=>x.key>=lowKey&&x.base).map(x=>x.base[k]).filter(v=>v!=null);
   if(vs.length<LM_Z_MIN_DAYS)return null;
   const mean=vs.reduce((a,b)=>a+b,0)/vs.length;
   const sd=Math.sqrt(vs.reduce((a,b)=>a+(b-mean)**2,0)/(vs.length-1));
@@ -1892,7 +1903,7 @@ function lmMdPct(days,idx,k){
   const day=days[idx],cur=day.load[k];
   if(cur==null||!day.md)return null;
   const season=dateToSeason(day.date);
-  const vs=days.slice(0,idx).filter(x=>x.md===day.md&&x.part==='Full'&&dateToSeason(x.date)===season).map(x=>x.load[k]).filter(v=>v!=null);
+  const vs=days.slice(0,idx).filter(x=>x.md===day.md&&x.basePart==='Full'&&x.base&&dateToSeason(x.date)===season).map(x=>x.base[k]).filter(v=>v!=null);
   if(vs.length<LM_MD_MIN_DAYS)return null;
   const mean=vs.reduce((a,b)=>a+b,0)/vs.length;
   if(!mean)return null;
@@ -2046,7 +2057,7 @@ function renderPlayerCompare(){
   const groupByDate=selDates.length>1;
   const avgOf=sessions=>{const avgs={};METRICS.forEach(k=>{const v=sessions.map(s=>s[k]).filter(x=>x!=null&&!isNaN(x));avgs[k]=v.length?+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):null;});return avgs;};
   const playerData=selected.map((player,pi)=>{
-    let sessions=(GPS[player]||[]).filter(s=>s.dist).sort((a,b)=>parseDate(a.date)-parseDate(b.date));
+    let sessions=(GPS[player]||[]).filter(s=>s.dist&&!isRTPSession(s)).sort((a,b)=>parseDate(a.date)-parseDate(b.date));
     if(mdF!=='all')sessions=sessions.filter(s=>String(s.md||'').trim()===mdF);
     if(selDates.length)sessions=sessions.filter(s=>selDates.includes(s.date));
     const base={player,color:PCOLORS[pi%PCOLORS.length],avgs:avgOf(sessions),count:sessions.length};
@@ -2258,7 +2269,7 @@ function pcsGetValues(player,metricVal,seasonF,sessionF,dateFrom,dateTo){
   const dfrom=dateFrom?new Date(dateFrom):null;
   const dto=dateTo?(()=>{const d=new Date(dateTo);d.setHours(23,59,59);return d;})():null;
   function fs(arr){let a=[...arr];if(seasonF&&seasonF!=='all')a=a.filter(r=>inSeason(r.date,seasonF));if(dfrom)a=a.filter(r=>parseDate(r.date)>=dfrom);if(dto)a=a.filter(r=>parseDate(r.date)<=dto);if(sessionF==='latest')a=a.length?[a[a.length-1]]:[];return a;}
-  if(src==='gps'){return fs((pcsLookup(GPS,player)||[]).filter(s=>s.dist&&s[f]!=null)).map(s=>({v:s[f],date:s.date}));}
+  if(src==='gps'){return fs((pcsLookup(GPS,player)||[]).filter(s=>s.dist&&s[f]!=null&&!isRTPSession(s))).map(s=>({v:s[f],date:s.date}));}
   if(src==='cmj'){return fs((pcsLookup(CMJ,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
   if(src==='nb'){return fs(pcsLookup(NB,player)||[]).map(r=>{const v=f==='bilateral'?+((r.lMax||0)+(r.rMax||0)).toFixed(1)/2:r[f];return v!=null?{v,date:r.date}:null;}).filter(Boolean);}
   if(src==='hip-abd'||src==='hip-add'){const dir=src==='hip-abd'?'pull':'squeeze';return fs((pcsLookup(VALD,player)||[]).filter(r=>dn(r.direction)===dir&&(r.lMax>0||r.rMax>0))).map(r=>{const v=f==='bilateral'?+((r.lMax||0)+(r.rMax||0)).toFixed(1)/2:r[f];return(v!=null&&(v>0||f==='imbalance'))?{v:+v.toFixed(1),date:r.date}:null;}).filter(Boolean);}
@@ -2508,9 +2519,9 @@ function renderMdpm(){
   const seasonF=document.getElementById('mdpm-season')?.value||'all';
   let sessions;
   if(player==='__group__'){
-    sessions=PLAYERS.filter(p=>AM[p]===ageF&&PM[p]!=='GK').flatMap(p=>(GPS[p]||[]).filter(s=>s.dist&&s.md&&inSeason(s.date,seasonF)));
+    sessions=PLAYERS.filter(p=>AM[p]===ageF&&PM[p]!=='GK').flatMap(p=>(GPS[p]||[]).filter(s=>s.dist&&s.md&&!isRTPSession(s)&&inSeason(s.date,seasonF)));
   } else {
-    sessions=(GPS[player]||[]).filter(s=>s.dist&&s.md&&inSeason(s.date,seasonF));
+    sessions=(GPS[player]||[]).filter(s=>s.dist&&s.md&&!isRTPSession(s)&&inSeason(s.date,seasonF));
   }
   const mdGroups={};
   MD_DAYS.forEach(d=>mdGroups[d]=[]);

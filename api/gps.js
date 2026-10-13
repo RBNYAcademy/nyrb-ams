@@ -109,6 +109,7 @@ module.exports = async (req, res) => {
       if (!dailyPlayerRows[d].players[player]) dailyPlayerRows[d].players[player] = [];
       dailyPlayerRows[d].players[player].push({
         dist,
+        rtp:    String(r['Session Type'] || '').trim().toLowerCase() === 'rtp',
         dpm:    toNum(r['Distance / min (m)']),
         hsr:    toNum(r['Distance (HSR) (m)']),
         vhsr:   toNum(r['Distance (VHSR) (m)']),
@@ -124,39 +125,46 @@ module.exports = async (req, res) => {
     Object.keys(dailyPlayerRows).forEach(d => {
       const { date, players } = dailyPlayerRows[d];
       dailyMap[d] = { date, vals: {} };
-      METRIC_KEYS.forEach(k => { dailyMap[d].vals[k] = []; });
+      dailyMap[d].avgVals = {};
+      METRIC_KEYS.forEach(k => { dailyMap[d].vals[k] = []; dailyMap[d].avgVals[k] = []; });
       Object.values(players).forEach(sessions => {
         const combined = combineSessions(sessions);
+        // RTP sessions count toward the weekly sum but not the averages.
+        const nonRTP = sessions.filter(s => !s.rtp);
+        const combinedNoRTP = nonRTP.length ? combineSessions(nonRTP) : null;
         METRIC_KEYS.forEach(k => {
           if (combined[k] != null) dailyMap[d].vals[k].push(combined[k]);
+          if (combinedNoRTP && combinedNoRTP[k] != null) dailyMap[d].avgVals[k].push(combinedNoRTP[k]);
         });
       });
     });
     const weeklyAgg = {};
-    Object.values(dailyMap).forEach(({ date, vals }) => {
+    Object.values(dailyMap).forEach(({ date, vals, avgVals }) => {
       const wk = `${date.getFullYear()}-W${String(getWeekNumber(date)).padStart(2, '0')}`;
       if (!weeklyAgg[wk]) {
         weeklyAgg[wk] = {};
-        METRIC_KEYS.forEach(k => { weeklyAgg[wk][k] = { sum: 0, avgSum: 0, n: 0 }; });
+        METRIC_KEYS.forEach(k => { weeklyAgg[wk][k] = { sum: 0, avgSum: 0, avgTotal: 0, n: 0 }; });
       }
       METRIC_KEYS.forEach(k => {
         const dayVals = vals[k];
-        if (!dayVals.length) return;
-        const daySum = dayVals.reduce((a, b) => a + b, 0);
-        weeklyAgg[wk][k].sum += daySum;
-        weeklyAgg[wk][k].avgSum += daySum / dayVals.length;
-        weeklyAgg[wk][k].n += dayVals.length;
+        if (dayVals.length) weeklyAgg[wk][k].sum += dayVals.reduce((a, b) => a + b, 0);
+        const aVals = avgVals[k];
+        if (!aVals.length) return;
+        const aSum = aVals.reduce((a, b) => a + b, 0);
+        weeklyAgg[wk][k].avgSum += aSum / aVals.length;
+        weeklyAgg[wk][k].avgTotal += aSum;
+        weeklyAgg[wk][k].n += aVals.length;
       });
     });
     const teamWeekly = {};
     Object.keys(weeklyAgg).sort().forEach(wk => {
       teamWeekly[wk] = {};
       METRIC_KEYS.forEach(k => {
-        const { sum, avgSum, n } = weeklyAgg[wk][k];
+        const { sum, avgSum, avgTotal, n } = weeklyAgg[wk][k];
         // mean = true grand average across every session that week (sum / n),
         // as opposed to `avg` which sums each day's average. Used for metrics
         // like maxspd where summing/day-averaging doesn't make sense.
-        teamWeekly[wk][k] = n ? { sum: +sum.toFixed(1), avg: +avgSum.toFixed(1), mean: +(sum / n).toFixed(1) } : null;
+        teamWeekly[wk][k] = (n || sum) ? { sum: +sum.toFixed(1), avg: n ? +avgSum.toFixed(1) : null, mean: n ? +(avgTotal / n).toFixed(1) : null } : null;
       });
     });
     res.status(200).json({
