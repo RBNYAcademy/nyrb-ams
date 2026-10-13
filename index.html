@@ -1252,7 +1252,8 @@ function sessionTypeMatches(d,type){
 }
 // RTP (return-to-play) sessions are left out of every average on the
 // dashboard — they still show as individual bars/rows, just not in the means.
-const isRTPSession=d=>String(d.session||'').trim().toLowerCase()==='rtp';
+// The sheet marks RTP in either Session Type or the MD (-) column.
+const isRTPSession=d=>[d.session,d.md].some(v=>String(v||'').trim().toLowerCase()==='rtp');
 // A player can have more than one GPS row on the same date (e.g. a separate
 // AM Training block and a PM IDP block) — sum the cumulative metrics, take
 // the peak for max speed, and recompute dist/min from the totals, so the

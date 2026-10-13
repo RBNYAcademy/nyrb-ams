@@ -109,7 +109,8 @@ module.exports = async (req, res) => {
       if (!dailyPlayerRows[d].players[player]) dailyPlayerRows[d].players[player] = [];
       dailyPlayerRows[d].players[player].push({
         dist,
-        rtp:    String(r['Session Type'] || '').trim().toLowerCase() === 'rtp',
+        // RTP can be marked in either Session Type or the MD (-) column.
+        rtp:    [r['Session Type'], r['MD (-)']].some(v => String(v || '').trim().toLowerCase() === 'rtp'),
         dpm:    toNum(r['Distance / min (m)']),
         hsr:    toNum(r['Distance (HSR) (m)']),
         vhsr:   toNum(r['Distance (VHSR) (m)']),
