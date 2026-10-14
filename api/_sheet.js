@@ -10,7 +10,48 @@ async function fetchSheet(tabName) {
     throw new Error(`Failed to fetch sheet "${tabName}": ${res.status} ${res.statusText}`);
   }
   const text = await res.text();
-  return parseCSV(text).filter(row => !isRemovedPlayerRow(row));
+  return parseCSV(text).filter(row => !isRemovedPlayerRow(row)).map(applyNameAliases);
+}
+
+// One player under different spellings across tabs: any cell that is exactly
+// the alias (case-insensitive) is rewritten to the name every other tab uses.
+// Tabs with split GivenName / FamilyName columns are matched on the two joined.
+const NAME_ALIASES = {
+  'Benjamin Huh': 'Ben Huh',
+  'Zyaire Champayne': "Zy'aire Champayne",
+  'Zy’aire Champayne': "Zy'aire Champayne",
+  'Niko Kruczek': 'Nikolas Kruczek',
+  'Sasha Demidov Menshikov': 'Aleksander Sasha Demidov Menshikov',
+  'Jordan Lacher': 'Jordi Lacher',
+  'Leonardo Dieujuste': 'Leo Dieujuste',
+  'Sai Mudichintala': 'Sai Mudinchintala',
+  'Marcus Nazaire': 'Marcus Nazairre',
+  'Sebasthian Chavez': 'Sebastian Chavez',
+  'Will Fernandes': 'Will Fernandez',
+  'Estifanos Thomspon': 'Estifanos Thompson',
+  'Alexito Gomez': 'Alex Gomez',
+  'Ziggy Baitinger': 'Zane Baitinger',
+};
+const NAME_ALIAS_MAP = new Map(Object.entries(NAME_ALIASES).map(([a, n]) => [a.toLowerCase(), n]));
+
+function applyNameAliases(row) {
+  for (const k in row) {
+    if (typeof row[k] !== 'string') continue;
+    const n = NAME_ALIAS_MAP.get(row[k].trim().toLowerCase());
+    if (n) row[k] = n;
+  }
+  const keys = Object.keys(row);
+  const gk = keys.find(k => k.trim().toLowerCase() === 'givenname');
+  const fk = keys.find(k => k.trim().toLowerCase() === 'familyname');
+  if (gk && fk) {
+    const n = NAME_ALIAS_MAP.get(`${row[gk] || ''} ${row[fk] || ''}`.trim().replace(/\s+/g, ' ').toLowerCase());
+    if (n) {
+      const [given, ...family] = n.split(' ');
+      row[gk] = given;
+      row[fk] = family.join(' ');
+    }
+  }
+  return row;
 }
 
 // Players removed from the whole dashboard: any row in any tab that names
@@ -28,6 +69,8 @@ const REMOVED_PLAYERS = [
   'Matthew Addai',
   'Salvatore Brancatelli',
   'Abdellahi Nasser Dine',
+  'Rohail Sekagya',
+  'Rohil Sekagya',
 ].map(n => n.toLowerCase().split(/\s+/));
 
 // Short / one-word names that would also catch other players by word match
