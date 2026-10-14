@@ -1465,7 +1465,7 @@ function isProtected(name){return PROTECTED_SET.has(String(name||'').trim().toLo
 const MIN_AGES=['RB2','U18','U16','U15','U14','U13'];
 // Left off the Minutes Tracker only (still on every other tab). Names must
 // match the GPS sheet's spelling (case-insensitive).
-const MIN_EXCLUDE=new Set(['Carlos Palma','Estifanos Thompson'].map(n=>n.toLowerCase()));
+const MIN_EXCLUDE=new Set(['Carlos Palma','Estifanos Thompson','Nicholas Gentile'].map(n=>n.toLowerCase()));
 function minExcluded(name){return MIN_EXCLUDE.has(String(name||'').trim().toLowerCase());}
 function getMinsMd(d){return+(d.mins)||0;}
 // Strips a trailing opponent age group: "Match vs DUSC U16" → "Match vs DUSC".
