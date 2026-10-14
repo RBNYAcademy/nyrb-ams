@@ -22,6 +22,7 @@ const NAME_ALIASES = {
   'Zy’aire Champayne': "Zy'aire Champayne",
   'Niko Kruczek': 'Nikolas Kruczek',
   'Sasha Demidov Menshikov': 'Aleksander Sasha Demidov Menshikov',
+  'Aleks Menshikov': 'Aleksander Sasha Demidov Menshikov',
   'Jordan Lacher': 'Jordi Lacher',
   'Leonardo Dieujuste': 'Leo Dieujuste',
   'Sai Mudichintala': 'Sai Mudinchintala',
@@ -31,18 +32,16 @@ const NAME_ALIASES = {
   'Estifanos Thomspon': 'Estifanos Thompson',
   'Alexito Gomez': 'Alex Gomez',
   'Ziggy Baitinger': 'Zane Baitinger',
+  'Johnny David': 'Jonathan David',
 };
 const NAME_ALIAS_MAP = new Map(Object.entries(NAME_ALIASES).map(([a, n]) => [a.toLowerCase(), n]));
 
 function applyNameAliases(row) {
-  for (const k in row) {
-    if (typeof row[k] !== 'string') continue;
-    const n = NAME_ALIAS_MAP.get(row[k].trim().toLowerCase());
-    if (n) row[k] = n;
-  }
   const keys = Object.keys(row);
   const gk = keys.find(k => k.trim().toLowerCase() === 'givenname');
   const fk = keys.find(k => k.trim().toLowerCase() === 'familyname');
+  // Split name columns are matched only as a pair: a family name on its own
+  // can equal an alias ("Sasha Demidov Menshikov") and must not be rewritten.
   if (gk && fk) {
     const n = NAME_ALIAS_MAP.get(`${row[gk] || ''} ${row[fk] || ''}`.trim().replace(/\s+/g, ' ').toLowerCase());
     if (n) {
@@ -50,6 +49,11 @@ function applyNameAliases(row) {
       row[gk] = given;
       row[fk] = family.join(' ');
     }
+  }
+  for (const k of keys) {
+    if (k === gk || k === fk || typeof row[k] !== 'string') continue;
+    const n = NAME_ALIAS_MAP.get(row[k].trim().toLowerCase());
+    if (n) row[k] = n;
   }
   return row;
 }
@@ -71,6 +75,7 @@ const REMOVED_PLAYERS = [
   'Abdellahi Nasser Dine',
   'Rohail Sekagya',
   'Rohil Sekagya',
+  'John Tolkin',
 ].map(n => n.toLowerCase().split(/\s+/));
 
 // Short / one-word names that would also catch other players by word match

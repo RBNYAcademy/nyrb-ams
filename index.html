@@ -3588,10 +3588,15 @@ function phvClearFilters(){
   renderPHV();
 }
 
+// Left off the Growth & Maturation tab only (PHV data still used elsewhere).
+// Names must match the PHV sheet's spelling (case-insensitive).
+const PHV_EXCLUDE=new Set(['Aiden Oks','Yuto Damonte','Carlos Palma'].map(n=>n.toLowerCase()));
+function phvExcluded(name){return PHV_EXCLUDE.has(String(name||'').trim().toLowerCase());}
 function initPHV(){
   const players=new Set();
   const birthYears=new Set();
   Object.entries(PHV_DATA).forEach(([name,arr])=>{
+    if(phvExcluded(name))return;
     players.add(name);
     arr.forEach(r=>{const by=birthYear(r.dob);if(by)birthYears.add(by);});
   });
@@ -3616,7 +3621,7 @@ function renderPHV(){
   // Gather rows
   let rows=[];
   Object.entries(PHV_DATA).forEach(([name,arr])=>{
-    if(!arr||!arr.length)return;
+    if(!arr||!arr.length||phvExcluded(name))return;
     if(playerF!=='all'&&name!==playerF)return;
     const entries=sessF==='latest'?[arr[arr.length-1]]:arr;
     entries.forEach(r=>{
