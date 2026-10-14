@@ -209,6 +209,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
         <button class="age-pill" data-age="U15" onclick="toggleAgePill(this)">U15</button>
         <button class="age-pill" data-age="U16" onclick="toggleAgePill(this)">U16</button>
         <button class="age-pill" data-age="U18" onclick="toggleAgePill(this)">U18</button>
+        <button class="age-pill" data-age="RBII" onclick="toggleAgePill(this)">RBII</button>
       </div>
       <span class="cl">Date:</span>
       <select class="ctrl" id="g-date" onchange="initDaily()"></select>
@@ -241,7 +242,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
   <div class="main">
     <div class="ctrl-row">
       <span class="cl">Match:</span><select class="ctrl" id="md-sel"></select>
-      <span class="cl">Age:</span><select class="ctrl" id="md-age"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option></select>
+      <span class="cl">Age:</span><select class="ctrl" id="md-age"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option><option value="RBII">RBII</option></select>
       <span class="cl">Filter:</span>
       <select class="ctrl" id="md-load"><option value="all">All Players</option><option value="full">Full Load Only</option><option value="under">Underload Only</option></select>
       <span class="cl">View:</span>
@@ -290,7 +291,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
   <div class="main">
     <div class="ctrl-row">
       <span class="cl">Season:</span><select class="ctrl" id="tpd-season" onchange="renderTeamPerDay()"><option value="all">All Seasons</option></select>
-      <span class="cl">Age:</span><select class="ctrl" id="tpd-age" onchange="renderTeamPerDay()"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option></select>
+      <span class="cl">Age:</span><select class="ctrl" id="tpd-age" onchange="renderTeamPerDay()"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option><option value="RBII">RBII</option></select>
       <span class="cl">Days:</span><select class="ctrl" id="tpd-n" onchange="renderTeamPerDay()"><option value="7">Last 7 days</option><option value="14">Last 14 days</option><option value="30" selected>Last 30 days</option><option value="all">All</option></select>
       <span class="cl">View:</span><select class="ctrl" id="tpd-agg" onchange="renderTeamPerDay()"><option value="avg" selected>Average</option><option value="sum">Sum</option></select>
       <button class="export-btn" onclick="exportPDF('page-teamperday')" style="margin-left:auto">⬇ Export PDF</button>
@@ -308,7 +309,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
   <div class="main">
     <div class="ctrl-row">
       <span class="cl">Season:</span><select class="ctrl" id="tw-season" onchange="renderTeamWeek()"><option value="all">All Seasons</option></select>
-      <span class="cl">Age:</span><select class="ctrl" id="tw-age" onchange="renderTeamWeek()"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option></select>
+      <span class="cl">Age:</span><select class="ctrl" id="tw-age" onchange="renderTeamWeek()"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option><option value="RBII">RBII</option></select>
       <span class="cl">Range:</span><select class="ctrl" id="tw-range" onchange="renderTeamWeek()"><option value="4">Last 4 weeks</option><option value="8">Last 8 weeks</option><option value="12" selected>Last 12 weeks</option><option value="all">All weeks</option></select>
       <span class="cl">View:</span><select class="ctrl" id="tw-agg" onchange="renderTeamWeek()"><option value="sum" selected>Sum</option><option value="avg">Average</option></select>
       <button class="export-btn" onclick="exportPDF('page-teamweek')" style="margin-left:auto">⬇ Export PDF</button>
@@ -349,7 +350,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
 <div class="page" id="page-acwr">
   <div class="main">
     <div class="ctrl-row">
-      <span class="cl">Team:</span><select class="ctrl" id="ac-team" onchange="renderACWR()"><option value="all">All Teams</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option></select>
+      <span class="cl">Team:</span><select class="ctrl" id="ac-team" onchange="renderACWR()"><option value="all">All Teams</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option><option value="RBII">RBII</option></select>
       <span class="cl">Day:</span><select class="ctrl" id="lm-date" onchange="renderLoadMonitor()"></select>
       <span class="cl">Window:</span><span style="font-family:var(--fontb);font-size:12px;color:#888">Last 28 Days</span>
       <button class="export-btn" onclick="exportPDF('page-acwr')" style="margin-left:auto">⬇ Export PDF</button>
@@ -529,6 +530,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
             <option value="U15">U15</option>
             <option value="U16">U16</option>
             <option value="U18">U18</option>
+            <option value="RBII">RBII</option>
           </select>
         </div>
         <!-- Full-width date/filter row — width:100% forces a new flex line -->
@@ -690,7 +692,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
 <!-- MD+/- -->
 <div class="page" id="page-mdpm">
   <div class="main">
-    <div class="ctrl-row"><span class="cl">Season:</span><select class="ctrl" id="mdpm-season" onchange="renderMdpm()"><option value="all">All Seasons</option></select><span class="cl">Age:</span><select class="ctrl" id="mdpm-age" onchange="initMdpm()"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option></select><span class="cl">Player:</span><select class="ctrl" id="mdpm-player"></select><span class="cl">Participation:</span><select class="ctrl" id="mdpm-part" onchange="renderMdpm()"><option value="full">Full Only</option><option value="all">All</option></select><button class="export-btn" onclick="exportPDF('page-mdpm')" style="margin-left:auto">⬇ Export PDF</button></div>
+    <div class="ctrl-row"><span class="cl">Season:</span><select class="ctrl" id="mdpm-season" onchange="renderMdpm()"><option value="all">All Seasons</option></select><span class="cl">Age:</span><select class="ctrl" id="mdpm-age" onchange="initMdpm()"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option><option value="RBII">RBII</option></select><span class="cl">Player:</span><select class="ctrl" id="mdpm-player"></select><span class="cl">Participation:</span><select class="ctrl" id="mdpm-part" onchange="renderMdpm()"><option value="full">Full Only</option><option value="all">All</option></select><button class="export-btn" onclick="exportPDF('page-mdpm')" style="margin-left:auto">⬇ Export PDF</button></div>
     <div class="ctrl-row">
       <label class="cl" style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="mdpm-proj" onchange="renderMdpm()">Project MD</label>
       <input type="range" id="mdpm-mins" min="0" max="90" step="1" value="90" oninput="renderMdpm()" style="width:220px;accent-color:var(--red)" disabled>
@@ -734,7 +736,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
     <div class="ctrl-row">
       <span class="cl">Age:</span>
       <select class="ctrl" id="test-age" onchange="onTestChange()" multiple size="3" style="height:auto;min-width:90px">
-        <option value="all" selected>All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option>
+        <option value="all" selected>All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option><option value="RBII">RBII</option>
       </select>
       <span class="cl">Test:</span>
       <select class="ctrl" id="test-sort" onchange="onTestChange()">
@@ -815,7 +817,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
       <div class="scale-box"><div class="sbt">Movement Scale</div><div class="sis"><div class="si"><span class="sn" style="background:#cc0000">1</span>Needs 1-on-1 help</div><div class="si"><span class="sn" style="background:#e05000">2</span>Struggling, needed cues</div><div class="si"><span class="sn" style="background:#d4a000">3</span>Got it after 3–4 cues</div><div class="si"><span class="sn" style="background:#5a9000">4</span>1–2 cues or shaky</div><div class="si"><span class="sn" style="background:#007a30">5</span>No cues — ready for weights</div></div></div>
       <div class="panel" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span class="cl">Age:</span>
-        <select class="ctrl" id="ms-age-filter" onchange="renderMSOv()"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option></select>
+        <select class="ctrl" id="ms-age-filter" onchange="renderMSOv()"><option value="all">All Ages</option><option value="U13">U13</option><option value="U14">U14</option><option value="U15">U15</option><option value="U16">U16</option><option value="U18">U18</option><option value="RBII">RBII</option></select>
         <select class="ctrl" id="ms-date-filter" onchange="renderMSOv()"><option value="latest">Latest Session</option><option value="all">All Sessions</option></select>
         <button class="export-btn" onclick="exportPDF('page-movement')" style="margin-left:auto">⬇ Export PDF</button>
       </div>
@@ -842,6 +844,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
         <button class="age-pill" data-age="U15" onclick="toggleRankAgePill(this)">U15</button>
         <button class="age-pill" data-age="U16" onclick="toggleRankAgePill(this)">U16</button>
         <button class="age-pill" data-age="U18" onclick="toggleRankAgePill(this)">U18</button>
+        <button class="age-pill" data-age="RBII" onclick="toggleRankAgePill(this)">RBII</button>
       </div>
       <span class="cl">Pos:</span>
       <select class="ctrl" id="rank-pos" onchange="renderRank()"><option value="all">All</option><option value="CB">CB</option><option value="FW">FW</option><option value="FB">FB</option><option value="GK">GK</option><option value="MF">MF</option></select>
@@ -878,6 +881,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
         <button class="age-pill" data-age="U15" onclick="toggleSpdAgePill(this)">U15</button>
         <button class="age-pill" data-age="U16" onclick="toggleSpdAgePill(this)">U16</button>
         <button class="age-pill" data-age="U18" onclick="toggleSpdAgePill(this)">U18</button>
+        <button class="age-pill" data-age="RBII" onclick="toggleSpdAgePill(this)">RBII</button>
       </div>
       <span class="cl">Pos:</span>
       <select class="ctrl" id="spd-pos" onchange="renderSpeedExp()"><option value="all">All</option><option value="CB">CB</option><option value="FW">FW</option><option value="FB">FB</option><option value="GK">GK</option><option value="MF">MF</option></select>
@@ -1458,7 +1462,7 @@ const PROTECTED_PLAYERS=[
 ];
 const PROTECTED_SET=new Set(PROTECTED_PLAYERS.map(n=>n.trim().toLowerCase()));
 function isProtected(name){return PROTECTED_SET.has(String(name||'').trim().toLowerCase());}
-const MIN_AGES=['U18','U16','U15','U14','U13'];
+const MIN_AGES=['RBII','U18','U16','U15','U14','U13'];
 // Left off the Minutes Tracker only (still on every other tab). Names must
 // match the GPS sheet's spelling (case-insensitive).
 const MIN_EXCLUDE=new Set(['Carlos Palma','Estifanos Thompson'].map(n=>n.toLowerCase()));

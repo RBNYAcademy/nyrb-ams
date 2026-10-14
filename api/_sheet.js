@@ -22,10 +22,29 @@ const REMOVED_PLAYERS = [
   'Devin Padelford',
   'Babeto Marshall-Rutty',
   'Ruben Makon',
+  'Jediah David',
+  'Chris Fitanidis',
+  'Marco Morigi',
+  'Matthew Addai',
+  'Salvatore Brancatelli',
+  'Abdellahi Nasser Dine',
 ].map(n => n.toLowerCase().split(/\s+/));
 
+// Short / one-word names that would also catch other players by word match
+// ("Pedro" ⊂ "Joao Pedro", "Shunya" ⊂ "Shunya Sakai"), so these only drop a
+// row when a cell is exactly the name.
+const REMOVED_EXACT = new Set([
+  'Kevin',
+  'Pedro',
+  'Shunya',
+  'Nassar D',
+  'Nasser D',
+].map(n => n.toLowerCase()));
+
 function isRemovedPlayerRow(row) {
-  const text = Object.values(row).filter(v => typeof v === 'string').join(' | ').toLowerCase();
+  const cells = Object.values(row).filter(v => typeof v === 'string');
+  if (cells.some(v => REMOVED_EXACT.has(v.trim().toLowerCase()))) return true;
+  const text = cells.join(' | ').toLowerCase();
   return REMOVED_PLAYERS.some(words => words.every(w => text.includes(w)));
 }
 
