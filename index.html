@@ -434,8 +434,8 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
       <!-- GPS filters -->
       <div id="pc-gps-filters" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
         <div>
-          <div class="cl" style="margin-bottom:4px">Players <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(click to toggle)</span></div>
-          <select class="ctrl" id="pc-players" multiple size="6" style="min-width:190px;height:auto" onchange="renderPlayerCompare()"></select>
+          <div class="cl" style="margin-bottom:4px">Players <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(type to search · Enter adds top match)</span></div>
+          <select id="pc-players" multiple style="display:none" onchange="renderPlayerCompare()"></select>
         </div>
         <div>
           <div class="cl" style="margin-bottom:4px">Date <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(click to toggle)</span></div>
@@ -455,8 +455,8 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
       <!-- VALD filters -->
       <div id="pc-vald-filters" style="display:none;gap:14px;align-items:flex-start;flex-wrap:wrap">
         <div>
-          <div class="cl" style="margin-bottom:4px">Players <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(click to toggle)</span></div>
-          <select class="ctrl" id="pcv-players" multiple size="6" style="min-width:190px;height:auto" onchange="renderPCVald()"></select>
+          <div class="cl" style="margin-bottom:4px">Players <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(type to search · Enter adds top match)</span></div>
+          <select id="pcv-players" multiple style="display:none" onchange="renderPCVald()"></select>
         </div>
         <div>
           <div class="cl" style="margin-bottom:4px">Test</div>
@@ -494,8 +494,8 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
       <!-- Testing filters -->
       <div id="pc-testing-filters" style="display:none;gap:14px;align-items:flex-start;flex-wrap:wrap">
         <div>
-          <div class="cl" style="margin-bottom:4px">Players <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(click to toggle)</span></div>
-          <select class="ctrl" id="pct-players" multiple size="6" style="min-width:190px;height:auto" onchange="renderPCTesting()"></select>
+          <div class="cl" style="margin-bottom:4px">Players <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(type to search · Enter adds top match)</span></div>
+          <select id="pct-players" multiple style="display:none" onchange="renderPCTesting()"></select>
         </div>
         <div>
           <div class="cl" style="margin-bottom:4px">Metric</div>
@@ -519,13 +519,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
       <div id="pc-studio-filters" style="display:none;gap:12px;align-items:flex-start;flex-wrap:wrap">
         <div>
           <div class="cl" style="margin-bottom:4px">Players <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(type to search · Enter adds top match)</span></div>
-          <!-- Hidden select stays the source of truth; #pcs-picker is the visible UI that drives it -->
           <select id="pcs-players" multiple style="display:none" onchange="renderPCStudio()"></select>
-          <div id="pcs-picker" class="pcs-picker">
-            <div class="pcs-chips" id="pcs-chips"></div>
-            <input type="text" class="ctrl pcs-search" id="pcs-search" placeholder="Search players…" autocomplete="off" oninput="pcsPickerRender()" onkeydown="pcsSearchKey(event)"/>
-            <div class="pcs-list" id="pcs-list"></div>
-          </div>
         </div>
         <div>
           <div class="cl" style="margin-bottom:4px">Chart Type</div>
@@ -2047,10 +2041,11 @@ function pcDtypeChange(){
   else if(dt==='studio')renderPCStudio();
 }
 function initPlayerCompare(){
+  const recent=pcsRecentFilter();
   const pSel=document.getElementById('pc-players');
   const prevP=[...pSel.selectedOptions].map(o=>o.value);
   pSel.innerHTML='';
-  [...PLAYERS].sort((a,b)=>a.localeCompare(b)).forEach(p=>{
+  [...PLAYERS].filter(recent).sort((a,b)=>a.localeCompare(b)).forEach(p=>{
     const o=document.createElement('option');o.value=p;o.textContent=p;
     if(prevP.includes(p))o.selected=true;pSel.appendChild(o);
   });
@@ -2066,17 +2061,18 @@ function initPlayerCompare(){
   const pvSel=document.getElementById('pcv-players');
   const prevPV=[...pvSel.selectedOptions].map(o=>o.value);
   pvSel.innerHTML='';
-  [...new Set([...Object.keys(CMJ),...Object.keys(NB),...Object.keys(VALD)])].sort((a,b)=>a.localeCompare(b)).forEach(p=>{
+  [...new Set([...Object.keys(CMJ),...Object.keys(NB),...Object.keys(VALD)])].filter(recent).sort((a,b)=>a.localeCompare(b)).forEach(p=>{
     const o=document.createElement('option');o.value=p;o.textContent=p;
     if(prevPV.includes(p))o.selected=true;pvSel.appendChild(o);
   });
   const ptSel=document.getElementById('pct-players');
   const prevPT=[...ptSel.selectedOptions].map(o=>o.value);
   ptSel.innerHTML='';
-  [...new Set([...Object.keys(SPRINT),...Object.keys(T505),...Object.keys(BROAD),...Object.keys(MAS_DATA),...Object.keys(RPM)])].sort((a,b)=>a.localeCompare(b)).forEach(p=>{
+  [...new Set([...Object.keys(SPRINT),...Object.keys(T505),...Object.keys(BROAD),...Object.keys(MAS_DATA),...Object.keys(RPM)])].filter(recent).sort((a,b)=>a.localeCompare(b)).forEach(p=>{
     const o=document.createElement('option');o.value=p;o.textContent=p;
     if(prevPT.includes(p))o.selected=true;ptSel.appendChild(o);
   });
+  ['pc-players','pcv-players','pct-players'].forEach(ppRender);
   populateRPMOptions('pct-metric','pct-rpm-group',' — Est. 1RM (lb)');
   initPCStudio();
   pcDtypeChange();
@@ -2317,15 +2313,8 @@ function pcsGetValues(player,metricVal,seasonF,sessionF,dateFrom,dateTo){
   return[];
 }
 
-function pcsAllPlayers(ageF){
-  // Build a Map keyed by lowercase name. Process non-GPS first, then GPS last so GPS casing wins.
-  const canon=new Map();
-  [CMJ,NB,VALD,SPRINT,T505,BROAD,MAS_DATA,PHV_DATA,MS_DATA,RPM].forEach(src=>{
-    Object.keys(src).forEach(name=>{const k=name.toLowerCase();if(!canon.has(k))canon.set(k,name);});
-  });
-  // GPS overwrites — its casing is canonical
-  Object.keys(GPS).forEach(name=>{canon.set(name.toLowerCase(),name);});
-  // Most recent dated record per player across every source; drop anyone with nothing in the last year
+// Returns a name test: true if the player has any dated record, in any source, within the last year
+function pcsRecentFilter(){
   const last=new Map();
   [GPS,CMJ,NB,VALD,SPRINT,T505,BROAD,MAS_DATA,PHV_DATA,MS_DATA,RPM].forEach(src=>{
     Object.entries(src).forEach(([name,rows])=>{
@@ -2334,7 +2323,18 @@ function pcsAllPlayers(ageF){
     });
   });
   const cutoff=Date.now()-365*86400000;
-  let p=[...canon.values()].filter(x=>(last.get(x.toLowerCase())||0)>=cutoff).sort((a,b)=>a.localeCompare(b));
+  return name=>(last.get(String(name).toLowerCase())||0)>=cutoff;
+}
+function pcsAllPlayers(ageF){
+  // Build a Map keyed by lowercase name. Process non-GPS first, then GPS last so GPS casing wins.
+  const canon=new Map();
+  [CMJ,NB,VALD,SPRINT,T505,BROAD,MAS_DATA,PHV_DATA,MS_DATA,RPM].forEach(src=>{
+    Object.keys(src).forEach(name=>{const k=name.toLowerCase();if(!canon.has(k))canon.set(k,name);});
+  });
+  // GPS overwrites — its casing is canonical
+  Object.keys(GPS).forEach(name=>{canon.set(name.toLowerCase(),name);});
+  const recent=pcsRecentFilter();
+  let p=[...canon.values()].filter(recent).sort((a,b)=>a.localeCompare(b));
   if(ageF&&ageF!=='all')p=p.filter(x=>pAge(x)===ageF);
   return p;
 }
@@ -2358,64 +2358,75 @@ function initPCStudio(){
     if(prev.includes(p))o.selected=true;
     pSel.appendChild(o);
   });
-  pcsPickerRender();
+  ppRender('pcs-players');
 }
 
-// ── Player picker (drives the hidden #pcs-players select) ────────
+// ── Player picker ─────────────────────────────────────────────────
+// A hidden <select multiple> stays the source of truth (render functions read
+// its selectedOptions); ppMount puts a searchable list next to it, and every
+// pick fires the select's own onchange so the chart re-renders.
 // List groups: birth year from the PHV DOB (oldest first), players without one go last
 function pcsGroup(name){return String(minBirthYear(name)||'No DOB');}
 function pcsEsc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function pcsMatches(){
-  const q=(document.getElementById('pcs-search')?.value||'').trim().toLowerCase();
-  const opts=[...document.getElementById('pcs-players').options];
+function ppMount(id){
+  if(document.getElementById(id+'-picker'))return;
+  const sel=document.getElementById(id);if(!sel)return;
+  const d=document.createElement('div');d.id=id+'-picker';d.className='pcs-picker';
+  d.innerHTML=`<div class="pcs-chips" id="${id}-chips"></div><input type="text" class="ctrl pcs-search" id="${id}-search" placeholder="Search players…" autocomplete="off" oninput="ppRender('${id}')" onkeydown="ppSearchKey(event,'${id}')"/><div class="pcs-list" id="${id}-list"></div>`;
+  sel.after(d);
+}
+function ppMatches(id){
+  const q=(document.getElementById(id+'-search')?.value||'').trim().toLowerCase();
+  const opts=[...document.getElementById(id).options];
   if(!q)return opts;
   return opts.filter(o=>(o.textContent+' '+pcsGroup(o.value)).toLowerCase().includes(q));
 }
-function pcsPickerRender(){
-  const sel=document.getElementById('pcs-players');
-  const chips=document.getElementById('pcs-chips'),list=document.getElementById('pcs-list');
+function ppRender(id){
+  ppMount(id);
+  const sel=document.getElementById(id);
+  const chips=document.getElementById(id+'-chips'),list=document.getElementById(id+'-list');
   if(!sel||!chips||!list)return;
   const opts=[...sel.options];
-  // Chip colours follow the same order renderPCStudio uses (selected options in DOM order)
+  // Chip colours follow the order the render functions use (selected options in DOM order)
   const on=opts.filter(o=>o.selected);
-  chips.innerHTML=on.map((o,i)=>`<span class="pcs-chip"><span class="dot" style="background:${PCOLORS[i%PCOLORS.length]}"></span>${pcsEsc(o.value)}<button title="Remove" onclick="pcsToggle(${opts.indexOf(o)})">×</button></span>`).join('')
-    +(on.length?`<button class="pcs-clear" onclick="pcsSetAll(null,false)">Clear all</button>`:'');
-  const shown=pcsMatches();
+  chips.innerHTML=on.map((o,i)=>`<span class="pcs-chip"><span class="dot" style="background:${PCOLORS[i%PCOLORS.length]}"></span>${pcsEsc(o.value)}<button title="Remove" onclick="ppToggle('${id}',${opts.indexOf(o)})">×</button></span>`).join('')
+    +(on.length?`<button class="pcs-clear" onclick="ppSetAll('${id}',null,false)">Clear all</button>`:'');
+  const shown=ppMatches(id);
   if(!shown.length){list.innerHTML='<div class="pcs-empty">No players match</div>';return;}
   const groups={};
   shown.forEach(o=>{const g=pcsGroup(o.value);(groups[g]=groups[g]||[]).push(o);});
   const keys=Object.keys(groups).sort((a,b)=>(+a||9999)-(+b||9999));
+  const searching=!!document.getElementById(id+'-search').value.trim();
   let first=true;
   list.innerHTML=keys.map(g=>{
     const grp=groups[g],allOn=grp.every(o=>o.selected);
-    return `<div class="pcs-grp"><span>${pcsEsc(g)} · ${grp.length}</span><button onclick="pcsSetAll('${pcsEsc(g)}',${!allOn})">${allOn?'Remove all':'Add all'}</button></div>`+
-      grp.map(o=>{const i=opts.indexOf(o),hl=first&&document.getElementById('pcs-search').value.trim();first=false;
+    return `<div class="pcs-grp"><span>${pcsEsc(g)} · ${grp.length}</span><button onclick="ppSetAll('${id}','${pcsEsc(g)}',${!allOn})">${allOn?'Remove all':'Add all'}</button></div>`+
+      grp.map(o=>{const i=opts.indexOf(o),hl=first&&searching;first=false;
         const pos=[pAge(o.value),PM[o.value]].filter(Boolean).join(' · ');
-        return `<div class="pcs-row${o.selected?' on':''}${hl?' hl':''}" onclick="pcsToggle(${i})"><span class="box">${o.selected?'✓':''}</span>${pcsEsc(o.value)}<span class="tag">${pcsEsc(pos)}</span></div>`;}).join('');
+        return `<div class="pcs-row${o.selected?' on':''}${hl?' hl':''}" onclick="ppToggle('${id}',${i})"><span class="box">${o.selected?'✓':''}</span>${pcsEsc(o.value)}<span class="tag">${pcsEsc(pos)}</span></div>`;}).join('');
   }).join('');
 }
-function pcsToggle(i){
-  const o=document.getElementById('pcs-players').options[i];if(!o)return;
-  o.selected=!o.selected;
-  pcsPickerRender();renderPCStudio();
+function ppChanged(id){ppRender(id);document.getElementById(id).dispatchEvent(new Event('change'));}
+function ppToggle(id,i){
+  const o=document.getElementById(id).options[i];if(!o)return;
+  o.selected=!o.selected;ppChanged(id);
 }
 // group=null → every player currently shown in the list
-function pcsSetAll(group,val){
-  const targets=group===null&&!val?[...document.getElementById('pcs-players').options]:pcsMatches().filter(o=>group===null||pcsGroup(o.value)===group);
-  targets.forEach(o=>o.selected=val);
-  pcsPickerRender();renderPCStudio();
+function ppSetAll(id,group,val){
+  const targets=group===null&&!val?[...document.getElementById(id).options]:ppMatches(id).filter(o=>group===null||pcsGroup(o.value)===group);
+  targets.forEach(o=>o.selected=val);ppChanged(id);
 }
-function pcsSearchKey(e){
+function ppSearchKey(e,id){
   const s=e.target;
   if(e.key==='Enter'){
     e.preventDefault();
     if(!s.value.trim())return;
-    const top=pcsMatches()[0];
-    if(top){top.selected=!top.selected;s.value='';pcsPickerRender();renderPCStudio();}
-  }else if(e.key==='Escape'){s.value='';pcsPickerRender();}
+    const top=ppMatches(id)[0];
+    if(top){top.selected=!top.selected;s.value='';ppChanged(id);}
+  }else if(e.key==='Escape'){s.value='';ppRender(id);}
   else if(e.key==='Backspace'&&!s.value){
-    const on=[...document.getElementById('pcs-players').options].filter(o=>o.selected);
-    if(on.length){on[on.length-1].selected=false;pcsPickerRender();renderPCStudio();}
+    const on=[...document.getElementById(id).options].filter(o=>o.selected);
+    if(on.length){on[on.length-1].selected=false;ppChanged(id);}
   }
 }
 

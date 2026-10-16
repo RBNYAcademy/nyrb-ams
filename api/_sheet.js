@@ -127,6 +127,20 @@ const REMOVED_PLAYERS = [
   'Liam Karasik',
   'Noah Franco',
   'Ryan Jose',
+  'Marco Li Vigni',
+  'Ian Paola',
+  'Ian Paolo',
+  'Eric Velasquez',
+  'Maximos Chrisafinis',
+  'Ryan Scuro',
+  'Sebastian Chavez',
+  'Sebasthian Chavez',
+  'Ari Haiek',
+  'Angel Ramirez',
+  'Aidan Jarvis',
+  'Frank Pah',
+  'Logan Cabral',
+  'Timothy Logan',
 ].map(n => n.toLowerCase().split(/\s+/));
 
 // Short / one-word names that would also catch other players by word match
@@ -138,11 +152,15 @@ const REMOVED_EXACT = new Set([
   'Shunya',
   'Nassar D',
   'Nasser D',
+  'Marco Li',
 ].map(n => n.toLowerCase()));
 
 function isRemovedPlayerRow(row) {
   const cells = Object.values(row).filter(v => typeof v === 'string');
   if (cells.some(v => REMOVED_EXACT.has(v.trim().toLowerCase()))) return true;
+  // Split-name tabs (GivenName / FamilyName): test the joined name exactly too
+  const full = `${row['GivenName'] || ''} ${row['FamilyName'] || ''}`.trim().toLowerCase();
+  if (full && REMOVED_EXACT.has(full)) return true;
   const text = cells.join(' | ').toLowerCase();
   return REMOVED_PLAYERS.some(words => words.every(w => text.includes(w)));
 }
