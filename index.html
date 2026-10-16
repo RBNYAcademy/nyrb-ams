@@ -115,6 +115,24 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
 .age-pill{background:#fff;border:1px solid var(--border);color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;padding:4px 9px;border-radius:3px;cursor:pointer;transition:all .12s;letter-spacing:.3px;white-space:nowrap}
 .age-pill.active{background:var(--red);border-color:var(--red);color:#fff}
 .age-pill:hover:not(.active){border-color:var(--red);color:var(--red)}
+.pcs-picker{width:290px;border:1px solid var(--border);border-radius:3px;background:#fff;padding:6px}
+.pcs-chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px}
+.pcs-chips:empty{display:none}
+.pcs-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:12px;padding:2px 4px 2px 8px;font-size:11px;font-family:var(--fontb);background:#fafafa;white-space:nowrap}
+.pcs-chip .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pcs-chip button{border:none;background:none;color:#999;cursor:pointer;font-size:13px;line-height:1;padding:0 3px}
+.pcs-chip button:hover{color:var(--red)}
+.pcs-clear{border:none;background:none;color:var(--red);font-size:10px;font-family:var(--font);font-weight:700;text-transform:uppercase;letter-spacing:.3px;cursor:pointer;padding:2px 4px}
+.pcs-search{width:100%;box-sizing:border-box;cursor:text}
+.pcs-list{max-height:200px;overflow-y:auto;margin-top:5px;border-top:1px solid #eee}
+.pcs-grp{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#f5f5f5;padding:3px 6px;font-family:var(--font);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--text2)}
+.pcs-grp button{border:none;background:none;color:var(--red);font-family:var(--font);font-size:10px;font-weight:700;text-transform:uppercase;cursor:pointer;padding:0}
+.pcs-row{display:flex;align-items:center;gap:7px;padding:4px 6px;font-size:12px;cursor:pointer;user-select:none}
+.pcs-row:hover,.pcs-row.hl{background:#fff5f5}
+.pcs-row .box{width:13px;height:13px;border:1px solid #bbb;border-radius:2px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
+.pcs-row.on .box{background:var(--red);border-color:var(--red)}
+.pcs-row .tag{margin-left:auto;font-size:10px;color:var(--text3)}
+.pcs-empty{padding:10px 6px;font-size:11px;color:#aaa}
 
 /* ── PLAYER CARD ─────────────────────────────────────────────── */
 :root{--pc-clip: polygon(
@@ -500,8 +518,14 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
       <!-- Studio filters: single flex-wrap container; the date-row div is width:100% so it always starts a new line -->
       <div id="pc-studio-filters" style="display:none;gap:12px;align-items:flex-start;flex-wrap:wrap">
         <div>
-          <div class="cl" style="margin-bottom:4px">Players <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(click to toggle)</span></div>
-          <select class="ctrl" id="pcs-players" multiple size="5" style="min-width:190px;height:auto" onchange="renderPCStudio()"></select>
+          <div class="cl" style="margin-bottom:4px">Players <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(type to search · Enter adds top match)</span></div>
+          <!-- Hidden select stays the source of truth; #pcs-picker is the visible UI that drives it -->
+          <select id="pcs-players" multiple style="display:none" onchange="renderPCStudio()"></select>
+          <div id="pcs-picker" class="pcs-picker">
+            <div class="pcs-chips" id="pcs-chips"></div>
+            <input type="text" class="ctrl pcs-search" id="pcs-search" placeholder="Search players…" autocomplete="off" oninput="pcsPickerRender()" onkeydown="pcsSearchKey(event)"/>
+            <div class="pcs-list" id="pcs-list"></div>
+          </div>
         </div>
         <div>
           <div class="cl" style="margin-bottom:4px">Chart Type</div>
@@ -2301,7 +2325,16 @@ function pcsAllPlayers(ageF){
   });
   // GPS overwrites — its casing is canonical
   Object.keys(GPS).forEach(name=>{canon.set(name.toLowerCase(),name);});
-  let p=[...canon.values()].sort((a,b)=>a.localeCompare(b));
+  // Most recent dated record per player across every source; drop anyone with nothing in the last year
+  const last=new Map();
+  [GPS,CMJ,NB,VALD,SPRINT,T505,BROAD,MAS_DATA,PHV_DATA,MS_DATA,RPM].forEach(src=>{
+    Object.entries(src).forEach(([name,rows])=>{
+      const k=name.toLowerCase();
+      (Array.isArray(rows)?rows:[]).forEach(r=>{const t=parseDate(r?.date).getTime();if(t>(last.get(k)||0))last.set(k,t);});
+    });
+  });
+  const cutoff=Date.now()-365*86400000;
+  let p=[...canon.values()].filter(x=>(last.get(x.toLowerCase())||0)>=cutoff).sort((a,b)=>a.localeCompare(b));
   if(ageF&&ageF!=='all')p=p.filter(x=>pAge(x)===ageF);
   return p;
 }
@@ -2325,6 +2358,64 @@ function initPCStudio(){
     if(prev.includes(p))o.selected=true;
     pSel.appendChild(o);
   });
+  pcsPickerRender();
+}
+
+// ── Player picker (drives the hidden #pcs-players select) ────────
+const PCS_AGE_ORDER=['U13','U14','U15','U16','U18','RB2'];
+function pcsEsc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function pcsMatches(){
+  const q=(document.getElementById('pcs-search')?.value||'').trim().toLowerCase();
+  const opts=[...document.getElementById('pcs-players').options];
+  if(!q)return opts;
+  return opts.filter(o=>o.textContent.toLowerCase().includes(q));
+}
+function pcsPickerRender(){
+  const sel=document.getElementById('pcs-players');
+  const chips=document.getElementById('pcs-chips'),list=document.getElementById('pcs-list');
+  if(!sel||!chips||!list)return;
+  const opts=[...sel.options];
+  // Chip colours follow the same order renderPCStudio uses (selected options in DOM order)
+  const on=opts.filter(o=>o.selected);
+  chips.innerHTML=on.map((o,i)=>`<span class="pcs-chip"><span class="dot" style="background:${PCOLORS[i%PCOLORS.length]}"></span>${pcsEsc(o.value)}<button title="Remove" onclick="pcsToggle(${opts.indexOf(o)})">×</button></span>`).join('')
+    +(on.length?`<button class="pcs-clear" onclick="pcsSetAll(null,false)">Clear all</button>`:'');
+  const shown=pcsMatches();
+  if(!shown.length){list.innerHTML='<div class="pcs-empty">No players match</div>';return;}
+  const groups={};
+  shown.forEach(o=>{const g=pAge(o.value)||'Other';(groups[g]=groups[g]||[]).push(o);});
+  const keys=Object.keys(groups).sort((a,b)=>{const ia=PCS_AGE_ORDER.indexOf(a),ib=PCS_AGE_ORDER.indexOf(b);return(ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b);});
+  let first=true;
+  list.innerHTML=keys.map(g=>{
+    const grp=groups[g],allOn=grp.every(o=>o.selected);
+    return `<div class="pcs-grp"><span>${pcsEsc(g)} · ${grp.length}</span><button onclick="pcsSetAll('${pcsEsc(g)}',${!allOn})">${allOn?'Remove all':'Add all'}</button></div>`+
+      grp.map(o=>{const i=opts.indexOf(o),hl=first&&document.getElementById('pcs-search').value.trim();first=false;
+        const pos=PM[o.value]||'';
+        return `<div class="pcs-row${o.selected?' on':''}${hl?' hl':''}" onclick="pcsToggle(${i})"><span class="box">${o.selected?'✓':''}</span>${pcsEsc(o.value)}<span class="tag">${pcsEsc(pos)}</span></div>`;}).join('');
+  }).join('');
+}
+function pcsToggle(i){
+  const o=document.getElementById('pcs-players').options[i];if(!o)return;
+  o.selected=!o.selected;
+  pcsPickerRender();renderPCStudio();
+}
+// group=null → every player currently shown in the list
+function pcsSetAll(group,val){
+  const targets=group===null&&!val?[...document.getElementById('pcs-players').options]:pcsMatches().filter(o=>group===null||(pAge(o.value)||'Other')===group);
+  targets.forEach(o=>o.selected=val);
+  pcsPickerRender();renderPCStudio();
+}
+function pcsSearchKey(e){
+  const s=e.target;
+  if(e.key==='Enter'){
+    e.preventDefault();
+    if(!s.value.trim())return;
+    const top=pcsMatches()[0];
+    if(top){top.selected=!top.selected;s.value='';pcsPickerRender();renderPCStudio();}
+  }else if(e.key==='Escape'){s.value='';pcsPickerRender();}
+  else if(e.key==='Backspace'&&!s.value){
+    const on=[...document.getElementById('pcs-players').options].filter(o=>o.selected);
+    if(on.length){on[on.length-1].selected=false;pcsPickerRender();renderPCStudio();}
+  }
 }
 
 function pcsChartTypeChange(){
@@ -2364,7 +2455,14 @@ function renderPCStudio(){
   const dateFrom=document.getElementById('pcs-date-from')?.value||'';
   const dateTo=document.getElementById('pcs-date-to')?.value||'';
   const selected=[...document.getElementById('pcs-players').selectedOptions].map(o=>o.value);
-  if(!selected.length||!xMetric)return;
+  if(!xMetric)return;
+  if(!selected.length){
+    document.getElementById('pcs-legend').innerHTML='';
+    const svgWrap=document.getElementById('pcs-svg-wrap');
+    document.getElementById('c-pcs').style.display='none';svgWrap.style.display='block';document.getElementById('pcs-chart-wrap').style.height='auto';
+    svgWrap.innerHTML='<div style="padding:40px;text-align:center;color:#bbb;font-family:var(--font);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Pick players to start charting</div>';
+    document.getElementById('tbl-pcs').innerHTML='';return;
+  }
   document.getElementById('pcs-y-wrap').style.display=chartType==='scatter'?'':'none';
   const xMeta=PCS_METRICS.find(m=>m.v===xMetric);
   const yMeta=PCS_METRICS.find(m=>m.v===yMetric);
