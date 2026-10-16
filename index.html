@@ -2606,6 +2606,8 @@ function renderVald(){
   const ll=arr=>arr.length?arr[arr.length-1]:{};
   const lCMJ=ll(cmjD),lNB=ll(nbDD),lAbd=ll(abdD),lAdd=ll(addD);
   const dlbl=r=>{const d=parseDate(r.date);return`${d.getUTCMonth()+1}/${d.getUTCDate()}`;};
+  const dtlbl=r=>r.test?[dlbl(r),r.test]:dlbl(r);
+  const dplbl=r=>r.position?[dlbl(r),r.position]:dlbl(r);
   const grpDs=data=>[
     {label:'L',data:data.map(r=>r.lMax),backgroundColor:'#555',borderColor:'#222',borderWidth:1,borderRadius:2},
     {label:'R',data:data.map(r=>r.rMax),backgroundColor:'#cc0000',borderColor:'#990000',borderWidth:1,borderRadius:2}];
@@ -2698,9 +2700,9 @@ function renderVald(){
     </div>`:''}
     ${!cmjD.length&&!nbDD.length&&!abdD.length&&!addD.length&&!broadD.length&&!sprintD.length&&!t505D.length&&!masD.length&&!rpmD.length?'<div class="vp vpf" style="padding:40px;text-align:center;color:#999">No testing data for this player</div>':''}`;
   if(cmjD.length)mkValdCMJ('vc-cmj',cmjD.map(dlbl),cmjD.map(r=>r.height),cmjD.map(r=>r.rsi));
-  if(nbDD.length)mkValdGrpBar('vc-nb',nbDD.map(dlbl),grpDs(nbDD));
-  if(abdD.length)mkValdGrpBar('vc-hip-abd',abdD.map(dlbl),grpDs(abdD));
-  if(addD.length)mkValdGrpBar('vc-hip-add',addD.map(dlbl),grpDs(addD));
+  if(nbDD.length)mkValdGrpBar('vc-nb',nbDD.map(dtlbl),grpDs(nbDD));
+  if(abdD.length)mkValdGrpBar('vc-hip-abd',abdD.map(dplbl),grpDs(abdD));
+  if(addD.length)mkValdGrpBar('vc-hip-add',addD.map(dplbl),grpDs(addD));
   if(broadD.length)mkValdBar('vc-broad',broadD.map(dlbl),broadD.map(r=>r.dist),'#cc0000','rgba(204,0,0,0.2)');
   if(sprintD.length)mkValdBar('vc-sprint',sprintD.map(dlbl),sprintD.map(r=>r.total),'#444','rgba(68,68,68,0.2)');
   if(t505D.length)mkValdBar('vc-505',t505D.map(dlbl),t505D.map(r=>r.time),'#444','rgba(68,68,68,0.2)');
@@ -2982,7 +2984,7 @@ function renderNBSquad(){
     const b=resultF==='recent'?d[d.length-1]:[...d].sort((a,c)=>((c.lMax||0)+(c.rMax||0))-((a.lMax||0)+(a.rMax||0)))[0];
     if(!b||(!b.lMax&&!b.rMax))return null;
     const bilateral=+((b.lMax||0)+(b.rMax||0)).toFixed(1);
-    return{name:n,age:b.age,pos:PM[n]||'?',left:b.lMax,right:b.rMax,bilateral,date:b.date};
+    return{name:n,age:b.age,pos:PM[n]||'?',left:b.lMax,right:b.rMax,bilateral,date:b.date,test:b.test};
   }).filter(Boolean).filter(p=>ageMatch(p.age,f)).sort((a,b)=>b.bilateral-a.bilateral);
   const names=players.map(p=>p.name);
   mkGrpBar('c-test-nb',names,[
@@ -2995,7 +2997,7 @@ function renderNBSquad(){
       <td style="font-weight:600">${p.name}</td><td>${ageBadge(p.age)}</td><td>${posBadge(p.pos)}</td>
       <td>${p.left?.toFixed(1)||'—'}</td><td>${p.right?.toFixed(1)||'—'}</td>
       <td style="font-family:var(--font);font-size:16px;font-weight:800;color:${i<3?'#cc0000':'#1a1a1a'}">${p.bilateral.toFixed(1)} N</td>
-      <td style="color:#888;font-size:12px">${p.date||'—'}</td>
+      <td style="color:#888;font-size:12px">${p.date||'—'}${p.test?`<div style="font-size:11px;color:#aaa">${p.test}</div>`:''}</td>
     </tr>`).join('')+
     `<tr style="background:#f8f8f8;border-top:2px solid var(--border)">
       <td colspan="4" style="font-family:var(--font);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#888;padding:6px 10px">Squad Avg</td>
@@ -3016,7 +3018,7 @@ function renderHipSquad(){
       if(!d.length)return null;
       const b=resultF==='recent'?d[d.length-1]:[...d].sort((a,c)=>((c.lMax||0)+(c.rMax||0))-((a.lMax||0)+(a.rMax||0)))[0];
       if(!b||(!b.lMax&&!b.rMax))return null;
-      return{name:n,age:b.age,pos:PM[n]||'?',left:b.lMax,right:b.rMax,bilateral:+((b.lMax||0)+(b.rMax||0)).toFixed(1),date:b.date};
+      return{name:n,age:b.age,pos:PM[n]||'?',left:b.lMax,right:b.rMax,bilateral:+((b.lMax||0)+(b.rMax||0)).toFixed(1),date:b.date,test:b.position};
     }).filter(Boolean).filter(p=>ageMatch(p.age,f)).sort((a,b)=>b.bilateral-a.bilateral);
     mkGrpBar(chartId,players.map(p=>p.name),[
       {label:'Left',data:players.map(p=>p.left),backgroundColor:'rgba(68,68,68,0.5)',borderColor:'#444',borderWidth:1,borderRadius:2},
@@ -3028,7 +3030,7 @@ function renderHipSquad(){
         <td style="font-weight:600">${p.name}</td><td>${ageBadge(p.age)}</td><td>${posBadge(p.pos)}</td>
         <td>${p.left?.toFixed(1)||'—'}</td><td>${p.right?.toFixed(1)||'—'}</td>
         <td style="font-family:var(--font);font-size:16px;font-weight:800;color:${i<3?'#cc0000':'#1a1a1a'}">${p.bilateral.toFixed(1)} N</td>
-        <td style="color:#888;font-size:12px">${p.date||'—'}</td>
+        <td style="color:#888;font-size:12px">${p.date||'—'}${p.test?`<div style="font-size:11px;color:#aaa">${p.test}</div>`:''}</td>
       </tr>`).join('')+
       `<tr style="background:#f8f8f8;border-top:2px solid var(--border)">
         <td colspan="4" style="font-family:var(--font);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#888;padding:6px 10px">Squad Avg</td>

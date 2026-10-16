@@ -13,6 +13,7 @@ module.exports = async (req, res) => {
         date:        row['Date UTC'] || null,
         test:        row['Test'] || null,
         direction:   row['Direction'] || null,
+        position:    row['Position'] || null,
         lMax:        toNum(row['L Max Force (N)']),
         rMax:        toNum(row['R Max Force (N)']),
         imbalance:   toNum(row['Max Imbalance']),
