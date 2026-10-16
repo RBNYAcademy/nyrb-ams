@@ -1,9 +1,12 @@
 // /api/gps — GPS_Daily tab
 const { fetchSheet } = require('./_sheet');
+// Positions missing or wrong on the sheet — key is the lowercase name
+const POS_OVERRIDE = { 'aidan betances': 'GK' };
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   try {
     const rows = dedupeRows(await fetchSheet('GPS_Daily'));
+    rows.forEach(r => { const o = POS_OVERRIDE[String(r['Name'] || '').trim().toLowerCase()]; if (o) r['Position'] = o; });
     const byPlayer = {};
     const posMap = {};
     const ageMap = {};

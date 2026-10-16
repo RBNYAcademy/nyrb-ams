@@ -1224,7 +1224,7 @@ function gpsAge(p,season){
 }
 // Manual pins for players who split time across teams. Names must match the
 // GPS sheet's spelling (case-insensitive). Remove when they move up for good.
-const AGE_OVERRIDE={'aaron judka':'U15','ben mccaughrain':'U15'};
+const AGE_OVERRIDE={'aaron judka':'U15','ben mccaughrain':'U15','omari coke':'U15','tyler edwards':'U15'};
 function pAge(p,season){return AGE_OVERRIDE[String(p||'').trim().toLowerCase()]||gpsAge(p,season)||gpsAge(p)||AM[p]||(CMJ[p]||[])[0]?.age||(NB[p]||[])[0]?.age||(VALD[p]||[])[0]?.age||null;}
 
 // ── DATE FILTER ───────────────────────────────────────────────────
@@ -2362,13 +2362,14 @@ function initPCStudio(){
 }
 
 // ── Player picker (drives the hidden #pcs-players select) ────────
-const PCS_AGE_ORDER=['U13','U14','U15','U16','U18','RB2'];
+// List groups: birth year from the PHV DOB (oldest first), players without one go last
+function pcsGroup(name){return String(minBirthYear(name)||'No DOB');}
 function pcsEsc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function pcsMatches(){
   const q=(document.getElementById('pcs-search')?.value||'').trim().toLowerCase();
   const opts=[...document.getElementById('pcs-players').options];
   if(!q)return opts;
-  return opts.filter(o=>o.textContent.toLowerCase().includes(q));
+  return opts.filter(o=>(o.textContent+' '+pcsGroup(o.value)).toLowerCase().includes(q));
 }
 function pcsPickerRender(){
   const sel=document.getElementById('pcs-players');
@@ -2382,14 +2383,14 @@ function pcsPickerRender(){
   const shown=pcsMatches();
   if(!shown.length){list.innerHTML='<div class="pcs-empty">No players match</div>';return;}
   const groups={};
-  shown.forEach(o=>{const g=pAge(o.value)||'Other';(groups[g]=groups[g]||[]).push(o);});
-  const keys=Object.keys(groups).sort((a,b)=>{const ia=PCS_AGE_ORDER.indexOf(a),ib=PCS_AGE_ORDER.indexOf(b);return(ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b);});
+  shown.forEach(o=>{const g=pcsGroup(o.value);(groups[g]=groups[g]||[]).push(o);});
+  const keys=Object.keys(groups).sort((a,b)=>(+a||9999)-(+b||9999));
   let first=true;
   list.innerHTML=keys.map(g=>{
     const grp=groups[g],allOn=grp.every(o=>o.selected);
     return `<div class="pcs-grp"><span>${pcsEsc(g)} · ${grp.length}</span><button onclick="pcsSetAll('${pcsEsc(g)}',${!allOn})">${allOn?'Remove all':'Add all'}</button></div>`+
       grp.map(o=>{const i=opts.indexOf(o),hl=first&&document.getElementById('pcs-search').value.trim();first=false;
-        const pos=PM[o.value]||'';
+        const pos=[pAge(o.value),PM[o.value]].filter(Boolean).join(' · ');
         return `<div class="pcs-row${o.selected?' on':''}${hl?' hl':''}" onclick="pcsToggle(${i})"><span class="box">${o.selected?'✓':''}</span>${pcsEsc(o.value)}<span class="tag">${pcsEsc(pos)}</span></div>`;}).join('');
   }).join('');
 }
@@ -2400,7 +2401,7 @@ function pcsToggle(i){
 }
 // group=null → every player currently shown in the list
 function pcsSetAll(group,val){
-  const targets=group===null&&!val?[...document.getElementById('pcs-players').options]:pcsMatches().filter(o=>group===null||(pAge(o.value)||'Other')===group);
+  const targets=group===null&&!val?[...document.getElementById('pcs-players').options]:pcsMatches().filter(o=>group===null||pcsGroup(o.value)===group);
   targets.forEach(o=>o.selected=val);
   pcsPickerRender();renderPCStudio();
 }
