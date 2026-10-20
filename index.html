@@ -203,7 +203,8 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
 <div class="nav" data-section-group="testing" style="display:none">
   <div class="nav-tab" data-p="vald">Testing (Individual)</div>
   <div class="nav-tab" data-p="testing">Testing (Squad View)</div>
-  <div class="nav-tab" data-p="movement">Movement Screen</div>
+  <!-- Movement Screen tab hidden for now; page and initMovement are kept so it can be re-enabled -->
+  <!-- <div class="nav-tab" data-p="movement">Movement Screen</div> -->
   <div class="nav-tab" data-p="rank">Rankings</div>
   <div class="nav-tab" data-p="playercompare">Player Compare</div>
   <div class="nav-tab" data-p="trialist">Trialist</div>
@@ -1276,6 +1277,8 @@ function sessionTypeMatches(d,type){
 // dashboard — they still show as individual bars/rows, just not in the means.
 // The sheet marks RTP in either Session Type or the MD (-) column.
 const isRTPSession=d=>[d.session,d.md].some(v=>String(v||'').trim().toLowerCase()==='rtp');
+// Match rows' own Position can be blank, so fall back to the player's usual position.
+const isGKRow=d=>(d.pos||PM[d.name]||PM[d.player])==='GK';
 // A player can have more than one GPS row on the same date (e.g. a separate
 // AM Training block and a PM IDP block) — sum the cumulative metrics, take
 // the peak for max speed, and recompute dist/min from the totals, so the
@@ -1356,7 +1359,7 @@ function renderGauges(idx){
   const lf=document.getElementById('md-load').value;
   const getMins=d=>+(d.mins)||0;
   const ageF=document.getElementById('md-age')?.value||'all';
-  let mdData=(info.data||[]).filter(d=>d.dist&&d.pos!=='GK'&&!isRTPSession(d)&&(ageF==='all'||d.age===ageF));
+  let mdData=(info.data||[]).filter(d=>d.dist&&!isGKRow(d)&&!isRTPSession(d)&&(ageF==='all'||d.age===ageF));
   if(lf==='full')mdData=mdData.filter(d=>getMins(d)>=60);
   else if(lf==='under')mdData=mdData.filter(d=>{const m=getMins(d);return m>0&&m<60;});
   const weighted=document.getElementById('md-view')?.value==='weighted';
@@ -1369,7 +1372,7 @@ function renderGauges(idx){
     return+(rows.reduce((s,d)=>s+d[k]*getMins(d),0)/rows.reduce((s,d)=>s+getMins(d),0)).toFixed(1);
   };
   const seasonData=seasonMatches.flatMap(([,inf])=>{
-    let d=(inf.data||[]).filter(x=>x.dist&&x.pos!=='GK'&&!isRTPSession(x)&&(ageF==='all'||x.age===ageF));
+    let d=(inf.data||[]).filter(x=>x.dist&&!isGKRow(x)&&!isRTPSession(x)&&(ageF==='all'||x.age===ageF));
     if(lf==='full')d=d.filter(x=>getMins(x)>=60);
     else if(lf==='under')d=d.filter(x=>{const m=getMins(x);return m>0&&m<60;});
     return d;
@@ -1390,7 +1393,7 @@ function renderGauges(idx){
     const cur=+teamAvg(mdData,m);
     const sAvg=+teamAvg(seasonData,m);
     const perMatchVals=seasonMatches.map(([,inf])=>{
-      let d=(inf.data||[]).filter(x=>x.dist&&x.pos!=='GK'&&!isRTPSession(x));
+      let d=(inf.data||[]).filter(x=>x.dist&&!isGKRow(x)&&!isRTPSession(x));
       if(lf==='full')d=d.filter(x=>getMins(x)>=60);
       else if(lf==='under')d=d.filter(x=>{const m=getMins(x);return m>0&&m<60;});
       return matchAvg(d,m);
@@ -1584,6 +1587,9 @@ function renderMinutes(){
 
   const totalMins=players.reduce((s,p)=>s+(matchF!=null?(p.thisMatch||0):p.total),0);
   const played=players.filter(p=>p.apps>0).length;
+  // Goalkeeper minutes are left out of the averages (totals/counts keep them).
+  const outfield=players.filter(p=>p.pos!=='GK');
+  const outfieldPlayed=outfield.filter(p=>p.apps>0);
   const kpis=matchF!=null?[
     {v:players.length,l:'Players Used'},
     {v:Math.round(totalMins).toLocaleString(),l:'Total Minutes'},
@@ -1593,14 +1599,14 @@ function renderMinutes(){
   ]:prot?[
     {v:players.length,l:'Protected Players'},
     {v:MIN_TARGET.toLocaleString(),l:'Season Target (min)'},
-    {v:players.length?Math.round(players.reduce((s,p)=>s+p.total,0)/players.length):0,l:'Avg Minutes / Player'},
-    {v:players.length?Math.round(players.reduce((s,p)=>s+Math.min(p.total/MIN_TARGET,1),0)/players.length*100)+'%':'0%',l:'Avg % of Target'},
+    {v:outfield.length?Math.round(outfield.reduce((s,p)=>s+p.total,0)/outfield.length):0,l:'Avg Minutes / Player'},
+    {v:outfield.length?Math.round(outfield.reduce((s,p)=>s+Math.min(p.total/MIN_TARGET,1),0)/outfield.length*100)+'%':'0%',l:'Avg % of Target'},
     {v:players.filter(p=>p.total>=MIN_TARGET).length,l:'Target Reached'},
   ]:[
     {v:matches.length,l:'Matches'},
     {v:played,l:'Players Used'},
     {v:Math.round(totalMins).toLocaleString(),l:'Total Minutes'},
-    {v:played?Math.round(totalMins/played):0,l:'Avg Minutes / Player'},
+    {v:outfieldPlayed.length?Math.round(outfieldPlayed.reduce((s,p)=>s+p.total,0)/outfieldPlayed.length):0,l:'Avg Minutes / Player'},
     {v:players.filter(p=>p.total>=minTarget(p.name)).length,l:'Target Reached'},
     {v:players.reduce((s,p)=>s+p.unk,0),l:'Apps with Minutes Not Logged'},
   ];
