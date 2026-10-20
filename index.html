@@ -49,6 +49,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--fontb);font-size:1
 .ctrl-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 select.ctrl,input.ctrl{background:#fff;border:1px solid var(--border);color:var(--text);padding:4px 9px;border-radius:3px;font-size:12px;font-family:var(--fontb);outline:none;cursor:pointer}
 select.ctrl:focus{border-color:var(--red)}
+.msel{position:relative;display:inline-block}
+.msel-btn{background:#fff;border:1px solid var(--border);color:var(--text);padding:4px 9px;border-radius:3px;font-size:12px;font-family:var(--fontb);cursor:pointer;white-space:nowrap}
+.msel.open .msel-btn{border-color:var(--red)}
+.msel-menu{display:none;position:absolute;top:100%;left:0;z-index:50;margin-top:2px;min-width:170px;max-height:320px;overflow:auto;background:#fff;border:1px solid var(--border);border-radius:3px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:4px 0}
+.msel.open .msel-menu{display:block}
+.msel-menu label{display:flex;align-items:center;gap:7px;padding:4px 10px;font-size:12px;cursor:pointer;white-space:nowrap}
+.msel-menu label:hover{background:#f4f4f4}
+.msel-menu hr{border:0;border-top:1px solid var(--border);margin:4px 0}
 .cl{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
 .tw{background:#fff;border:1px solid var(--border);overflow:auto}
 table{width:100%;border-collapse:collapse}
@@ -278,7 +286,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
   <div class="main">
     <div class="ctrl-row">
       <span class="cl">Season:</span><select class="ctrl" id="min-season" onchange="renderMinutes()"><option value="all">All Seasons</option></select>
-      <span class="cl">Birth Year:</span><select class="ctrl" id="min-by" onchange="renderMinutes()"><option value="all">All Players</option><option value="protected">Protected Players</option></select>
+      <span class="cl">Birth Year:</span><div class="msel" id="min-by"><button type="button" class="msel-btn" id="min-by-btn" onclick="this.parentNode.classList.toggle('open')">All Players ▾</button><div class="msel-menu" id="min-by-menu"></div></div>
       <span class="cl">Match:</span><select class="ctrl" id="min-match" onchange="renderMinutes()"><option value="all">All Matches</option></select>
       <span class="cl">Pos:</span><select class="ctrl" id="min-pos" onchange="renderMinutes()"><option value="all">All</option><option value="CB">CB</option><option value="FW">FW</option><option value="FB">FB</option><option value="GK">GK</option><option value="MF">MF</option></select>
       <span class="cl">Sort by:</span>
@@ -1504,22 +1512,37 @@ function minBirthYear(name){
   return birthYear(dob)||BIRTH_YEAR_OVERRIDE[k]||null;
 }
 function initMinutes(){renderMinutes();}
+// Birth Year filter: 'all', 'protected', or any mix of years (plus 'none' = No DOB).
+let MIN_BY=['all'];
+function minByPick(v,on){
+  if(v==='all'||v==='protected')MIN_BY=[v];
+  else{
+    MIN_BY=MIN_BY.filter(x=>x!=='all'&&x!=='protected'&&x!==v);
+    if(on)MIN_BY.push(v);
+    if(!MIN_BY.length)MIN_BY=['all'];
+  }
+  renderMinutes();
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#min-by'))document.getElementById('min-by')?.classList.remove('open');});
 function renderMinutes(){
   const seasonF=document.getElementById('min-season')?.value||'all';
   // Birth Year dropdown: years of everyone in the selected season's GPS data.
   // "No DOB" catches players missing from the PHV sheet so nobody drops off.
-  const bySel=document.getElementById('min-by'),byPrev=bySel?.value||'all';
   const yrs=new Set();let noDob=false;
   PLAYERS.forEach(p=>{if(minExcluded(p)||!(GPS[p]||[]).some(s=>s.dist&&inSeason(s.date,seasonF)))return;const y=minBirthYear(p);if(y)yrs.add(y);else noDob=true;});
-  bySel.innerHTML='<option value="all">All Players</option><option value="protected">Protected Players</option>'+[...yrs].sort((a,b)=>a-b).map(y=>`<option value="${y}">${y}</option>`).join('')+(noDob?'<option value="none">No DOB</option>':'');
-  bySel.value=[...bySel.options].some(o=>o.value===byPrev)?byPrev:'all';
-  const byF=document.getElementById('min-by')?.value||'all';
+  const byOpts=[...yrs].sort((a,b)=>a-b).map(String).concat(noDob?['none']:[]);
+  MIN_BY=MIN_BY.filter(v=>v==='all'||v==='protected'||byOpts.includes(v));
+  if(!MIN_BY.length)MIN_BY=['all'];
+  const byLbl=v=>v==='all'?'All Players':v==='protected'?'Protected Players':v==='none'?'No DOB':v;
+  const byBox=v=>`<label><input type="checkbox" ${MIN_BY.includes(v)?'checked':''} onchange="minByPick('${v}',this.checked)">${byLbl(v)}</label>`;
+  document.getElementById('min-by-menu').innerHTML=byBox('all')+byBox('protected')+(byOpts.length?'<hr>':'')+byOpts.map(byBox).join('');
+  document.getElementById('min-by-btn').textContent=(MIN_BY.length>3?MIN_BY.length+' years':MIN_BY.map(byLbl).join(', '))+' ▾';
   const posF=document.getElementById('min-pos')?.value||'all';
   const sortBy=document.getElementById('min-sort')?.value||'name';
-  const prot=byF==='protected';
+  const prot=MIN_BY[0]==='protected';
   // Own age group follows the selected season (see gpsAge).
   const ownAge=name=>pAge(name,seasonF);
-  const byOk=name=>{if(byF==='all')return true;const y=minBirthYear(name);return byF==='none'?!y:String(y)===byF;};
+  const byOk=name=>{if(MIN_BY[0]==='all')return true;const y=minBirthYear(name);return MIN_BY.includes(y?String(y):'none');};
   const playerOk=name=>!minExcluded(name)&&(prot?isProtected(name):byOk(name));
   // RTP rows can carry an MD tag (see sessionTypeMatches) but aren't match minutes.
   // Same opponent on the same date is one match, whatever age suffix the
