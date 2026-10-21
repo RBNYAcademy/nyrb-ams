@@ -30,7 +30,7 @@ const NAME_ALIASES = {
   'Sebasthian Chavez': 'Sebastian Chavez',
   'Will Fernandes': 'Will Fernandez',
   'Estifanos Thomspon': 'Estifanos Thompson',
-  'Alexito Gomez': 'Alex Gomez',
+  'Alex Gomez': 'Alexito Gomez',
   'Ziggy Baitinger': 'Zane Baitinger',
   'Johnny David': 'Jonathan David',
 };
