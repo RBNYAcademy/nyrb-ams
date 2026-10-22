@@ -479,6 +479,11 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
               <option value="cmj-rsi">CMJ — RSI-mod</option>
               <option value="cmj-power">CMJ — Power/BM</option>
             </optgroup>
+            <optgroup label="Drop Jump">
+              <option value="dj-rsi">Drop Jump — RSI (m/s)</option>
+              <option value="dj-height">Drop Jump — Height (cm)</option>
+              <option value="dj-contact">Drop Jump — Contact Time (s)</option>
+            </optgroup>
             <optgroup label="NordBord">
               <option value="nb-bilateral">NordBord — Bilateral Avg (N)</option>
               <option value="nb-lMax">NordBord — Left (N)</option>
@@ -777,6 +782,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
         <optgroup label="Power"><option value="broad">Broad Jump</option></optgroup>
         <optgroup label="Aerobic"><option value="mas">MAS</option></optgroup>
         <optgroup label="CMJ"><option value="cmj">CMJ</option></optgroup>
+        <optgroup label="Drop Jump"><option value="dropjump">Drop Jump</option></optgroup>
         <optgroup label="NordBord"><option value="nordbord">NordBord</option></optgroup>
         <optgroup label="Hip Force"><option value="hipforce">Hip Force</option></optgroup>
       </select>
@@ -825,6 +831,13 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
         <div class="panel"><div class="pt">CMJ — RSI-mod</div><div class="cb-lg"><canvas id="c-test-cmj-rsi"></canvas></div></div>
       </div>
       <div class="panel sg"><div class="pt ptl">Results</div><div class="tw"><table id="tbl-cmj-squad"></table></div></div>
+    </div>
+    <div id="test-dj-section" style="display:none">
+      <div class="pg g2 sg">
+        <div class="panel"><div class="pt">Drop Jump — RSI (m/s)</div><div class="cb-lg"><canvas id="c-test-dj-rsi"></canvas></div></div>
+        <div class="panel"><div class="pt">Drop Jump — Jump Height (cm)</div><div class="cb-lg"><canvas id="c-test-dj-h"></canvas></div></div>
+      </div>
+      <div class="panel sg"><div class="pt ptl">Results</div><div class="tw"><table id="tbl-dj-squad"></table></div></div>
     </div>
     <div id="test-nb-section" style="display:none">
       <div class="panel sg"><div class="pt">NordBord — Max Force (N)</div><div class="cb-lg"><canvas id="c-test-nb"></canvas></div></div>
@@ -885,6 +898,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
         <optgroup label="5-0-5"><option value="t505-time">5-0-5</option></optgroup>
         <optgroup label="Broad Jump"><option value="broad-dist">Broad Jump (cm)</option></optgroup>
         <optgroup label="CMJ"><option value="cmj-height">CMJ Height</option><option value="cmj-rsi">CMJ RSI</option><option value="cmj-power">CMJ Power/BM</option></optgroup>
+        <optgroup label="Drop Jump"><option value="dj-rsi">Drop Jump RSI</option><option value="dj-height">Drop Jump Height</option><option value="dj-contact">Drop Jump Contact Time</option></optgroup>
         <optgroup label="MAS"><option value="mas-mas">MAS Score</option><option value="mas-distance">MAS Distance (m)</option></optgroup>
         <optgroup label="NordBord"><option value="nb-bilateral">NordBord Bilateral Avg</option><option value="nb-lMax">NordBord Left</option><option value="nb-rMax">NordBord Right</option></optgroup>
         <optgroup label="Hip Abduction (Pull)"><option value="hip-abd-bilateral">Abduction Bilateral Avg</option><option value="hip-abd-lMax">Abduction Left</option><option value="hip-abd-rMax">Abduction Right</option></optgroup>
@@ -1055,7 +1069,7 @@ td.lm-c{text-align:center;font-weight:700;font-family:var(--font)}
 })();
 const API='';
 let PLAYERS=[],GPS={},PM={},AM={},LATEST={},MATCH_LIST=[],TEAM_WEEKLY={},WEEK_KEYS=[];
-let CMJ={},NB={},VALD={},SPRINT={},T505={},BROAD={},MAS_DATA={},MS_DATA={};
+let CMJ={},DJ={},NB={},VALD={},SPRINT={},T505={},BROAD={},MAS_DATA={},MS_DATA={};
 let TRIALIST_CMJ={},TRIALIST_MS={};
 let PHV_DATA={};
 let RPM={};
@@ -1096,7 +1110,7 @@ function inSeason(dateStr,season){
 function populateSeasonDropdowns(){
   const dates=[];
   Object.values(GPS).forEach(arr=>arr.forEach(s=>s.date&&dates.push(s.date)));
-  [SPRINT,T505,BROAD,CMJ,NB,MAS_DATA,RPM].forEach(obj=>Object.values(obj).forEach(arr=>arr&&arr.forEach(r=>r.date&&dates.push(r.date))));
+  [SPRINT,T505,BROAD,CMJ,DJ,NB,MAS_DATA,RPM].forEach(obj=>Object.values(obj).forEach(arr=>arr&&arr.forEach(r=>r.date&&dates.push(r.date))));
   Object.values(VALD).forEach(arr=>arr&&arr.forEach(r=>r.date&&dates.push(r.date)));
   const found=new Set(dates.map(d=>dateToSeason(d)).filter(Boolean));
   // Always include known seasons so the dropdown is never empty
@@ -1152,9 +1166,10 @@ function hideLoader(){document.getElementById('loader-overlay').style.display='n
 async function loadAllData(){
   showLoader();
   try{
-    const [gpsR,cmjR,nbR,hipR,spR,t5R,brR,maR,moR,trR,phvR,rpmR,medR,pcR]=await Promise.allSettled([
+    const [gpsR,cmjR,djR,nbR,hipR,spR,t5R,brR,maR,moR,trR,phvR,rpmR,medR,pcR]=await Promise.allSettled([
       fetch(API+'/api/gps').then(r=>r.json()),
       fetch(API+'/api/cmj').then(r=>r.json()),
+      fetch(API+'/api/dropjump').then(r=>r.json()),
       fetch(API+'/api/nordbord').then(r=>r.json()),
       fetch(API+'/api/hipforce').then(r=>r.json()),
       fetch(API+'/api/sprint').then(r=>r.json()),
@@ -1170,6 +1185,7 @@ async function loadAllData(){
     ]);
     if(gpsR.status==='fulfilled'&&!gpsR.value?.error){const d=gpsR.value;PLAYERS=(d.players||[]).sort((a,b)=>a.localeCompare(b));GPS=d.gps||{};PM=d.pos_map||{};AM=d.age_map||{};LATEST=d.latest||{};MATCH_LIST=d.match_list||[];TEAM_WEEKLY=d.team_weekly||{};WEEK_KEYS=d.week_keys||[];}
     if(cmjR.status==='fulfilled'&&!cmjR.value?.error) CMJ=cmjR.value;
+    if(djR.status==='fulfilled'&&!djR.value?.error) DJ=djR.value;
     if(nbR.status==='fulfilled'&&!nbR.value?.error) NB=nbR.value;
     if(hipR.status==='fulfilled'&&!hipR.value?.error) VALD=hipR.value;
     if(spR.status==='fulfilled'&&!spR.value?.error) SPRINT=spR.value;
@@ -2104,7 +2120,7 @@ function initPlayerCompare(){
   const pvSel=document.getElementById('pcv-players');
   const prevPV=[...pvSel.selectedOptions].map(o=>o.value);
   pvSel.innerHTML='';
-  [...new Set([...Object.keys(CMJ),...Object.keys(NB),...Object.keys(VALD)])].filter(recent).sort((a,b)=>a.localeCompare(b)).forEach(p=>{
+  [...new Set([...Object.keys(CMJ),...Object.keys(DJ),...Object.keys(NB),...Object.keys(VALD)])].filter(recent).sort((a,b)=>a.localeCompare(b)).forEach(p=>{
     const o=document.createElement('option');o.value=p;o.textContent=p;
     if(prevPV.includes(p))o.selected=true;pvSel.appendChild(o);
   });
@@ -2196,9 +2212,11 @@ function renderPCVald(){
   const testKey=document.getElementById('pcv-test').value;
   const agg=document.getElementById('pcv-agg').value;
   const parts=testKey.split('-');const cat=parts[0];const sub=parts[1];const fld=parts[2];
+  const lowerBetter=testKey==='dj-contact';
   const dn=s=>String(s||'').trim().toLowerCase();
   function getVal(player){
     if(cat==='cmj'){const arr=CMJ[player]||[];if(!arr.length)return null;const rec=agg==='best'?[...arr].sort((a,b)=>(b[sub]||0)-(a[sub]||0))[0]:arr[arr.length-1];return rec?{val:rec[sub],date:rec.date}:null;}
+    if(cat==='dj'){const arr=(DJ[player]||[]).filter(r=>r[sub]!=null);if(!arr.length)return null;const rec=agg==='best'?[...arr].sort((a,b)=>lowerBetter?a[sub]-b[sub]:b[sub]-a[sub])[0]:arr[arr.length-1];return rec?{val:rec[sub],date:rec.date}:null;}
     if(cat==='nb'){
       const arr=NB[player]||[];if(!arr.length)return null;
       if(sub==='bilateral'){const rec=agg==='best'?[...arr].sort((a,b)=>((b.lMax||0)+(b.rMax||0))-((a.lMax||0)+(a.rMax||0)))[0]:arr[arr.length-1];return rec?{val:+(((rec.lMax||0)+(rec.rMax||0))/2).toFixed(1),date:rec.date}:null;}
@@ -2215,7 +2233,7 @@ function renderPCVald(){
   const playerData=selected.map((p,i)=>{const r=getVal(p);return{player:p,color:PCOLORS[i%PCOLORS.length],val:r?r.val:null,date:r?r.date:null};});
   const title=document.getElementById('pcv-test').selectedOptions[0].text+' — '+agg;
   document.getElementById('pcv-title').textContent=title;
-  const sorted=[...playerData].filter(d=>d.val!=null).sort((a,b)=>(b.val||0)-(a.val||0));
+  const sorted=[...playerData].filter(d=>d.val!=null).sort((a,b)=>lowerBetter?a.val-b.val:(b.val||0)-(a.val||0));
   const c=document.getElementById('c-pcv');if(!c)return;if(CH['c-pcv'])CH['c-pcv'].destroy();
   const opts=bOpt();opts.layout={padding:{top:18}};
   opts.plugins.datalabels={anchor:'end',align:'top',color:'#222',font:{size:9,weight:'700'},clip:false,formatter:v=>v==null?'':typeof v==='number'?+(v%1===0?v.toFixed(0):v.toFixed(3)):v};
@@ -2275,6 +2293,10 @@ const PCS_METRICS=[
   {v:'cmj-bw',l:'CMJ Body Weight (kg)',g:'VALD',src:'cmj',f:'bw'},
   {v:'cmj-eccVel',l:'CMJ Ecc Peak Velocity (m/s)',g:'VALD',src:'cmj',f:'eccVel'},
   {v:'cmj-depth',l:'CMJ Countermovement Depth (cm)',g:'VALD',src:'cmj',f:'depth'},
+  {v:'dj-rsi',l:'Drop Jump RSI (m/s)',g:'VALD',src:'dj',f:'rsi'},
+  {v:'dj-height',l:'Drop Jump Height (cm)',g:'VALD',src:'dj',f:'height'},
+  {v:'dj-contact',l:'Drop Jump Contact Time (s)',g:'VALD',src:'dj',f:'contact'},
+  {v:'dj-drop',l:'Drop Jump Effective Drop (cm)',g:'VALD',src:'dj',f:'drop'},
   {v:'nb-lMax',l:'NordBord Left (N)',g:'VALD',src:'nb',f:'lMax'},
   {v:'nb-rMax',l:'NordBord Right (N)',g:'VALD',src:'nb',f:'rMax'},
   {v:'nb-bilateral',l:'NordBord Bilateral Avg (N)',g:'VALD',src:'nb',f:'bilateral'},
@@ -2344,6 +2366,7 @@ function pcsGetValues(player,metricVal,seasonF,sessionF,dateFrom,dateTo){
   function fs(arr){let a=[...arr];if(seasonF&&seasonF!=='all')a=a.filter(r=>inSeason(r.date,seasonF));if(dfrom)a=a.filter(r=>parseDate(r.date)>=dfrom);if(dto)a=a.filter(r=>parseDate(r.date)<=dto);if(sessionF==='latest')a=a.length?[a[a.length-1]]:[];return a;}
   if(src==='gps'){return fs((pcsLookup(GPS,player)||[]).filter(s=>s.dist&&s[f]!=null&&!isRTPSession(s))).map(s=>({v:s[f],date:s.date}));}
   if(src==='cmj'){return fs((pcsLookup(CMJ,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
+  if(src==='dj'){return fs((pcsLookup(DJ,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
   if(src==='nb'){return fs(pcsLookup(NB,player)||[]).map(r=>{const v=f==='bilateral'?+((r.lMax||0)+(r.rMax||0)).toFixed(1)/2:r[f];return v!=null?{v,date:r.date}:null;}).filter(Boolean);}
   if(src==='hip-abd'||src==='hip-add'){const dir=src==='hip-abd'?'pull':'squeeze';return fs((pcsLookup(VALD,player)||[]).filter(r=>dn(r.direction)===dir&&(r.lMax>0||r.rMax>0))).map(r=>{const v=f==='bilateral'?+((r.lMax||0)+(r.rMax||0)).toFixed(1)/2:r[f];return(v!=null&&(v>0||f==='imbalance'))?{v:+v.toFixed(1),date:r.date}:null;}).filter(Boolean);}
   if(src==='sprint'){return fs((pcsLookup(SPRINT,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
@@ -2359,7 +2382,7 @@ function pcsGetValues(player,metricVal,seasonF,sessionF,dateFrom,dateTo){
 // Returns a name test: true if the player has any dated record, in any source, within the last year
 function pcsRecentFilter(){
   const last=new Map();
-  [GPS,CMJ,NB,VALD,SPRINT,T505,BROAD,MAS_DATA,PHV_DATA,MS_DATA,RPM].forEach(src=>{
+  [GPS,CMJ,DJ,NB,VALD,SPRINT,T505,BROAD,MAS_DATA,PHV_DATA,MS_DATA,RPM].forEach(src=>{
     Object.entries(src).forEach(([name,rows])=>{
       const k=name.toLowerCase();
       (Array.isArray(rows)?rows:[]).forEach(r=>{const t=parseDate(r?.date).getTime();if(t>(last.get(k)||0))last.set(k,t);});
@@ -2371,7 +2394,7 @@ function pcsRecentFilter(){
 function pcsAllPlayers(ageF){
   // Build a Map keyed by lowercase name. Process non-GPS first, then GPS last so GPS casing wins.
   const canon=new Map();
-  [CMJ,NB,VALD,SPRINT,T505,BROAD,MAS_DATA,PHV_DATA,MS_DATA,RPM].forEach(src=>{
+  [CMJ,DJ,NB,VALD,SPRINT,T505,BROAD,MAS_DATA,PHV_DATA,MS_DATA,RPM].forEach(src=>{
     Object.keys(src).forEach(name=>{const k=name.toLowerCase();if(!canon.has(k))canon.set(k,name);});
   });
   // GPS overwrites — its casing is canonical
@@ -2730,7 +2753,7 @@ function renderMdpm(){
 function initVald(){
   const sel=document.getElementById('vald-player');
   if(!sel.options.length){
-    const names=new Set([...Object.keys(CMJ),...Object.keys(NB),...Object.keys(VALD),...Object.keys(RPM)]);
+    const names=new Set([...Object.keys(CMJ),...Object.keys(DJ),...Object.keys(NB),...Object.keys(VALD),...Object.keys(RPM)]);
     const sorted=[...names].sort((a,b)=>a.localeCompare(b));
     sorted.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;sel.appendChild(o);});
   }
@@ -2744,6 +2767,7 @@ function renderVald(){
   const dr=document.getElementById('vald-date-range')?.value||'all';
   function fr(arr){if(!arr||!arr.length)return[];if(dr==='latest'){const l=arr[arr.length-1];return l?[l]:[];}if(dr!=='all')return arr.filter(r=>inSeason(r.date,dr));return arr;}
   const cmjD=fr(CMJ[pn]||[]);
+  const djD=bestPerDate(fr(DJ[pn]||[]).filter(r=>r.rsi!=null),(a,b)=>(a.rsi||0)>(b.rsi||0));
   const nbD=fr(NB[pn]||[]);
   const hipAll=fr(VALD[pn]||[]).filter(r=>r.lMax>0||r.rMax>0);
   const sprintD=bestPerDate(fr(SPRINT[pn]||[]).filter(r=>r.total!=null),(a,b)=>(a.total||99)<(b.total||99));
@@ -2775,6 +2799,20 @@ function renderVald(){
         <td style="font-family:var(--font);font-size:19px;font-weight:800;color:#cc0000">${lCMJ.rsi||'—'}</td>
         <td style="font-family:var(--font);font-size:19px;font-weight:800">${lCMJ.power||'—'}</td>
       </tr></tbody></table>
+    </div>`:''}
+    ${djD.length?`<div class="vp vpf">
+      <div class="vpt">Drop Jump <span>— ${pn}</span></div>
+      <div class="vleg"><div class="vli"><div class="vld" style="background:#444;border:1px solid #999"></div>Height (cm)</div><div class="vli"><div class="vld" style="background:#cc0000"></div>RSI (m/s)</div></div>
+      <div style="position:relative;height:260px"><canvas id="vc-dj"></canvas></div>
+      <table class="mt" style="margin-top:8px"><thead><tr><th>Date</th><th>RSI (m/s)</th><th>Height (cm)</th><th>Contact Time (s)</th><th>Effective Drop (cm)</th></tr></thead><tbody>
+        ${[...djD].reverse().map(r=>`<tr>
+          <td style="color:#888">${r.date||'—'}</td>
+          <td style="font-family:var(--font);font-size:17px;font-weight:700;color:#cc0000">${r.rsi!=null?r.rsi.toFixed(2):'—'}</td>
+          <td style="font-family:var(--font);font-size:17px;font-weight:700">${r.height!=null?r.height.toFixed(1):'—'}</td>
+          <td>${r.contact!=null?r.contact.toFixed(3):'—'}</td>
+          <td>${r.drop!=null?r.drop.toFixed(1):'—'}</td>
+        </tr>`).join('')}
+      </tbody></table>
     </div>`:''}
     ${nbDD.length?`<div class="vp">
       <div class="vpt">NordBord</div>
@@ -2851,8 +2889,9 @@ function renderVald(){
         </tr>`).join('')}
       </tbody></table>
     </div>`:''}
-    ${!cmjD.length&&!nbDD.length&&!abdD.length&&!addD.length&&!broadD.length&&!sprintD.length&&!t505D.length&&!masD.length&&!rpmD.length?'<div class="vp vpf" style="padding:40px;text-align:center;color:#999">No testing data for this player</div>':''}`;
+    ${!cmjD.length&&!djD.length&&!nbDD.length&&!abdD.length&&!addD.length&&!broadD.length&&!sprintD.length&&!t505D.length&&!masD.length&&!rpmD.length?'<div class="vp vpf" style="padding:40px;text-align:center;color:#999">No testing data for this player</div>':''}`;
   if(cmjD.length)mkValdCMJ('vc-cmj',cmjD.map(dlbl),cmjD.map(r=>r.height),cmjD.map(r=>r.rsi));
+  if(djD.length)mkValdCMJ('vc-dj',djD.map(dlbl),djD.map(r=>r.height),djD.map(r=>r.rsi));
   if(nbDD.length)mkValdGrpBar('vc-nb',nbDD.map(dtlbl),grpDs(nbDD));
   if(abdD.length)mkValdGrpBar('vc-hip-abd',abdD.map(dplbl),grpDs(abdD));
   if(addD.length)mkValdGrpBar('vc-hip-add',addD.map(dplbl),grpDs(addD));
@@ -2873,11 +2912,12 @@ function renderVald(){
 function initTesting(){populateRPMOptions('test-sort','test-rpm-group',' — Est. 1RM');}
 function onTestChange(){
   const val=document.getElementById('test-sort').value;
-  ['test-sprint-section','test-mas-section','test-broad-section','test-cmj-section','test-nb-section','test-hip-section','test-rpm-section','test-placeholder'].forEach(id=>document.getElementById(id).style.display='none');
+  ['test-sprint-section','test-mas-section','test-broad-section','test-cmj-section','test-dj-section','test-nb-section','test-hip-section','test-rpm-section','test-placeholder'].forEach(id=>document.getElementById(id).style.display='none');
   if(!val){document.getElementById('test-placeholder').style.display='block';return;}
   if(val==='mas'){document.getElementById('test-mas-section').style.display='block';renderMAS();}
   else if(val==='broad'){document.getElementById('test-broad-section').style.display='block';renderBroad();}
   else if(val==='cmj'){document.getElementById('test-cmj-section').style.display='block';renderCMJSquad();}
+  else if(val==='dropjump'){document.getElementById('test-dj-section').style.display='block';renderDJSquad();}
   else if(val==='nordbord'){document.getElementById('test-nb-section').style.display='block';renderNBSquad();}
   else if(val==='hipforce'){document.getElementById('test-hip-section').style.display='block';renderHipSquad();}
   else if(val.startsWith('rpm-')){document.getElementById('test-rpm-section').style.display='block';renderRPMSquad();}
@@ -3129,6 +3169,42 @@ function renderCMJSquad(){
     </tr>`+
     '</tbody>';
 }
+// Drop Jump has no Age Group column — age comes from the player's GPS / other tabs
+function renderDJSquad(){
+  const f=ageF(),resultF=document.getElementById('test-result')?.value||'best',seasonF=document.getElementById('test-season')?.value||'all';
+  const players=Object.entries(DJ).map(([n,arr])=>{
+    const d=bestPerDate(arr.filter(r=>r.rsi!=null&&inSeason(r.date,seasonF)),(a,b)=>(a.rsi||0)>(b.rsi||0));
+    if(!d.length)return null;
+    const b=resultF==='recent'?d[d.length-1]:[...d].sort((a,b)=>b.rsi-a.rsi)[0];
+    if(!b||!b.rsi)return null;
+    return{name:n,age:pAge(n),pos:PM[n]||'?',rsi:b.rsi,height:b.height,contact:b.contact,drop:b.drop,date:b.date};
+  }).filter(Boolean).filter(p=>ageMatch(p.age,f)).sort((a,b)=>b.rsi-a.rsi);
+  const cols=players.map(p=>PC[p.pos]||'#888');
+  const djDates=players.map(p=>p.date);
+  mkBarM('c-test-dj-rsi',players.map(p=>p.name),players.map(p=>p.rsi),cols,cols.map(c=>c+'55'),djDates);
+  mkBarM('c-test-dj-h',players.map(p=>p.name),players.map(p=>p.height),cols,cols.map(c=>c+'55'),djDates);
+  const avgN=(arr,dp)=>{const v=arr.filter(x=>x!=null&&!isNaN(x));return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(dp):'—';};
+  document.getElementById('tbl-dj-squad').innerHTML=
+    `<thead><tr><th>#</th><th>Player</th><th>Age</th><th>Pos</th><th>RSI (m/s)</th><th>Height (cm)</th><th>Contact Time (s)</th><th>Effective Drop (cm)</th><th>Date</th></tr></thead><tbody>`+
+    players.map((p,i)=>`<tr>
+      <td><span class="rn ${i<3?'top':''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span></td>
+      <td style="font-weight:600">${p.name}</td><td>${ageBadge(p.age)}</td><td>${posBadge(p.pos)}</td>
+      <td style="font-family:var(--font);font-size:16px;font-weight:800;color:${i<3?'#cc0000':'#1a1a1a'}">${p.rsi.toFixed(2)}</td>
+      <td style="font-family:var(--font);font-size:14px;font-weight:700">${p.height!=null?p.height.toFixed(1)+' cm':'—'}</td>
+      <td>${p.contact!=null?p.contact.toFixed(3)+' s':'—'}</td>
+      <td>${p.drop!=null?p.drop.toFixed(1)+' cm':'—'}</td>
+      <td style="color:#888;font-size:12px">${p.date||'—'}</td>
+    </tr>`).join('')+
+    `<tr style="background:#f8f8f8;border-top:2px solid var(--border)">
+      <td colspan="4" style="font-family:var(--font);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#888;padding:6px 10px">Squad Avg</td>
+      <td style="font-family:var(--font);font-size:16px;font-weight:800;color:#cc0000">${avgN(players.map(p=>p.rsi),2)}</td>
+      <td style="font-family:var(--font);font-size:14px;font-weight:700">${avgN(players.map(p=>p.height),1)} cm</td>
+      <td>${avgN(players.map(p=>p.contact),3)} s</td>
+      <td>${avgN(players.map(p=>p.drop),1)} cm</td>
+      <td></td>
+    </tr>`+
+    '</tbody>';
+}
 function renderNBSquad(){
   const f=ageF(),resultF=document.getElementById('test-result')?.value||'best',seasonF=document.getElementById('test-season')?.value||'all';
   const players=Object.entries(NB).map(([n,arr])=>{
@@ -3237,6 +3313,7 @@ function renderRank(){
   else if(cat==='t505'){ranked=Object.entries(T505).map(([n,arr])=>{const a=bestPerDate(sf(arr),(a,b)=>(a.time||99)<(b.time||99)).filter(r=>fa(r.age));if(!a.length)return null;const b=[...a].sort((a,b)=>a.time-b.time)[0];return{name:n,age:b.age,pos:PM[n]||'?',val:b.time,date:b.date};}).filter(Boolean).filter(r=>r.val).sort((a,b)=>a.val-b.val).map((r,i)=>({...r,rank:i+1,str:r.val.toFixed(3)+'s',lower:true}));}
   else if(cat==='broad'){ranked=Object.entries(BROAD).map(([n,arr])=>{const a=bestPerDate(sf(arr),(a,b)=>(a.dist||0)>(b.dist||0)).filter(r=>fa(r.age));if(!a.length)return null;const best=[...a].sort((a,b)=>(b.dist||0)-(a.dist||0))[0];if(!best||!best.dist)return null;return{name:n,age:best.age||arr[0]?.age,pos:PM[n]||'?',val:+best.dist,date:best.date};}).filter(Boolean).filter(r=>r.val>0).sort((a,b)=>b.val-a.val).map((r,i)=>({...r,rank:i+1,str:r.val.toFixed(1)+' cm'}));}
   else if(cat==='cmj'){ranked=Object.entries(CMJ).map(([n,arr])=>{const a=bestPerDate(sf(arr),(a,b)=>(a[key]||0)>(b[key]||0)).filter(r=>fa(r.age));if(!a.length)return null;const b=[...a].sort((a,b)=>b[key]-a[key])[0];return{name:n,age:b.age,pos:PM[n]||'?',val:b[key]||0,date:b.date};}).filter(Boolean).filter(r=>r.val>0).sort((a,b)=>b.val-a.val).map((r,i)=>({...r,rank:i+1,str:key==='rsi'?r.val.toFixed(3):r.val.toFixed(1)+(key==='height'?' cm':' W/kg')}));}
+  else if(cat==='dj'){const lower=key==='contact';const better=(a,b)=>lower?(a[key]||99)<(b[key]||99):(a[key]||0)>(b[key]||0);ranked=Object.entries(DJ).map(([n,arr])=>{const age=pAge(n);if(!fa(age))return null;const a=bestPerDate(sf(arr).filter(r=>r[key]>0),better);if(!a.length)return null;const b=a.reduce((x,y)=>better(y,x)?y:x);return{name:n,age,pos:PM[n]||'?',val:b[key],date:b.date};}).filter(Boolean).sort((a,b)=>lower?a.val-b.val:b.val-a.val).map((r,i)=>({...r,rank:i+1,str:key==='rsi'?r.val.toFixed(2)+' m/s':key==='contact'?r.val.toFixed(3)+' s':r.val.toFixed(1)+' cm',lower}));}
   else if(cat==='mas'){const fk=sub==='distance'?'distance':'mas';ranked=Object.entries(MAS_DATA).map(([n,arr])=>{const a=bestPerDate(sf(arr),(a,b)=>(a[fk]||0)>(b[fk]||0)).filter(r=>fa(r.age));if(!a.length)return null;const b=[...a].sort((a,b)=>(b[fk]||0)-(a[fk]||0))[0];return{name:n,age:b.age,pos:PM[n]||'?',val:b[fk]||0,date:b.date};}).filter(Boolean).filter(r=>r.val>0).sort((a,b)=>b.val-a.val).map((r,i)=>({...r,rank:i+1,str:fk==='distance'?r.val.toFixed(1)+' m':r.val.toFixed(2)+' m/s'}));}
   else if(cat==='nb'){
     if(sub==='bilateral'){ranked=Object.entries(NB).map(([n,arr])=>{const a=bestPerDate(sf(arr),(a,b)=>((a.lMax||0)+(a.rMax||0))>((b.lMax||0)+(b.rMax||0))).filter(r=>fa(r.age));if(!a.length)return null;const b=[...a].sort((a,b)=>((b.lMax||0)+(b.rMax||0))-((a.lMax||0)+(a.rMax||0)))[0];const v=b?+((b.lMax||0)+(b.rMax||0)).toFixed(1)/2:0;return{name:n,age:b?.age,pos:PM[n]||'?',val:v,date:b?.date};}).filter(Boolean).filter(r=>r.val>0).sort((a,b)=>b.val-a.val).map((r,i)=>({...r,rank:i+1,str:r.val.toFixed(1)+' N'}));}
