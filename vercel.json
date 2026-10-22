@@ -10,7 +10,7 @@
   "rewrites": [
     { "source": "/api/gps",      "destination": "/api/gps.js" },
     { "source": "/api/cmj",      "destination": "/api/cmj.js" },
-    { "source": "/api/dropjump", "destination": "/api/dropjump.js" },
+    { "source": "/api/dropjump", "destination": "/api/cmj.js?type=dropjump" },
     { "source": "/api/nordbord", "destination": "/api/nordbord.js" },
     { "source": "/api/hipforce", "destination": "/api/hipforce.js" },
     { "source": "/api/sprint",   "destination": "/api/sprint.js" },
