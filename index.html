@@ -1899,7 +1899,9 @@ function renderPlayerWeek(){
     if(s.week==null)return;
     const wk=`${dateToSeason(s.date).slice(0,4)}-W${String(s.week).padStart(2,'0')}`;
     if(!weekly[wk])weekly[wk]={};
-    METRICS.forEach(k=>{if(s[k]!=null&&!(k==='maxspd'&&isRTPSession(s))){if(!weekly[wk][k])weekly[wk][k]=[];weekly[wk][k].push(s[k]);}});
+    // RTP sessions count in every metric here, max speed included, so a
+    // rehabbing player's week shows what they actually did.
+    METRICS.forEach(k=>{if(s[k]!=null){if(!weekly[wk][k])weekly[wk][k]=[];weekly[wk][k].push(s[k]);}});
   });
   let wkeys=Object.keys(weekly).sort();
   if(nVal!=='all')wkeys=wkeys.slice(-+nVal);
