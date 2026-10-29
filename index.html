@@ -1297,10 +1297,12 @@ function sessionTypeMatches(d,type){
   // (sheet also has Pre-Season, RTP, Testing, Conditioning, Rehab, etc.)
   return !isMatch;
 }
-// RTP (return-to-play) sessions are left out of every average on the
-// dashboard — they still show as individual bars/rows, just not in the means.
-// The sheet marks RTP in either Session Type or the MD (-) column.
-const isRTPSession=d=>[d.session,d.md].some(v=>String(v||'').trim().toLowerCase()==='rtp');
+// RTP (return-to-play) and INT (international duty) sessions are left out of
+// every average on the dashboard — they still show as individual bars/rows,
+// just not in the means. The sheet marks them in either Session Type or the
+// MD (-) column (INT also appears as "Int", "Int Camp" or "International").
+const NO_AVG_LABELS=new Set(['rtp','int','int camp','international']);
+const isNoAvgSession=d=>[d.session,d.md].some(v=>NO_AVG_LABELS.has(String(v||'').trim().toLowerCase()));
 // Match rows' own Position can be blank, so fall back to the player's usual position.
 const isGKRow=d=>(d.pos||PM[d.name]||PM[d.player])==='GK';
 // A player can have more than one GPS row on the same date (e.g. a separate
@@ -1334,7 +1336,7 @@ function initDaily(){
     const sessions=(GPS[p]||[]).filter(s=>s.date===selDate&&s.dist&&sessionTypeMatches(s,sessType)&&(ageAll||activePills.includes(String(s.age||'').trim()||pAge(p))));
     // RTP rows still show in the charts but are left out of the KPI averages,
     // so the averages are recomputed from the player's non-RTP sessions only.
-    const nonRTP=sessions.filter(s=>!isRTPSession(s));
+    const nonRTP=sessions.filter(s=>!isNoAvgSession(s));
     if(sessions.length)data.push({...combineDaySessions(sessions),player:p,pos:PM[p]||'MF',kpiRow:nonRTP.length?combineDaySessions(nonRTP):null});
   });
   if(pos!=='all')data=data.filter(d=>d.pos===pos);
@@ -1343,7 +1345,7 @@ function initDaily(){
   const kpis=[{k:'dist',l:'Avg Distance (m)'},{k:'dpm',l:'Avg Dist/Min'},{k:'hsr',l:'Avg HSR'},{k:'vhsr',l:'Avg VHSR'},{k:'sprint',l:'Avg Sprint'},{k:'expl',l:'Avg Explosive'},{k:'acc',l:'Avg Accels'},{k:'dec',l:'Avg Decels'}];
   // GK excluded from the blended average unless explicitly selected via the position filter.
   let kpiData=(pos==='all'?data.filter(d=>d.pos!=='GK'):data)
-    .map(d=>'kpiRow' in d?d.kpiRow:(isRTPSession(d)?null:d)).filter(Boolean);
+    .map(d=>'kpiRow' in d?d.kpiRow:(isNoAvgSession(d)?null:d)).filter(Boolean);
   // Averages only reflect players who participated fully — partial/modified participation is excluded. Session type is already applied above.
   kpiData=kpiData.filter(d=>String(d.participation||'').trim().toLowerCase()==='full');
   document.getElementById('daily-kpis').innerHTML=kpis.map(({k,l})=>`<div><div class="kv">${avg(kpiData.map(d=>d[k]))}</div><div class="kl">${l}</div></div>`).join('');
@@ -1383,7 +1385,7 @@ function renderGauges(idx){
   const lf=document.getElementById('md-load').value;
   const getMins=d=>+(d.mins)||0;
   const ageF=document.getElementById('md-age')?.value||'all';
-  let mdData=(info.data||[]).filter(d=>d.dist&&!isGKRow(d)&&!isRTPSession(d)&&(ageF==='all'||d.age===ageF));
+  let mdData=(info.data||[]).filter(d=>d.dist&&!isGKRow(d)&&!isNoAvgSession(d)&&(ageF==='all'||d.age===ageF));
   if(lf==='full')mdData=mdData.filter(d=>getMins(d)>=60);
   else if(lf==='under')mdData=mdData.filter(d=>{const m=getMins(d);return m>0&&m<60;});
   const weighted=document.getElementById('md-view')?.value==='weighted';
@@ -1396,7 +1398,7 @@ function renderGauges(idx){
     return+(rows.reduce((s,d)=>s+d[k]*getMins(d),0)/rows.reduce((s,d)=>s+getMins(d),0)).toFixed(1);
   };
   const seasonData=seasonMatches.flatMap(([,inf])=>{
-    let d=(inf.data||[]).filter(x=>x.dist&&!isGKRow(x)&&!isRTPSession(x)&&(ageF==='all'||x.age===ageF));
+    let d=(inf.data||[]).filter(x=>x.dist&&!isGKRow(x)&&!isNoAvgSession(x)&&(ageF==='all'||x.age===ageF));
     if(lf==='full')d=d.filter(x=>getMins(x)>=60);
     else if(lf==='under')d=d.filter(x=>{const m=getMins(x);return m>0&&m<60;});
     return d;
@@ -1417,7 +1419,7 @@ function renderGauges(idx){
     const cur=+teamAvg(mdData,m);
     const sAvg=+teamAvg(seasonData,m);
     const perMatchVals=seasonMatches.map(([,inf])=>{
-      let d=(inf.data||[]).filter(x=>x.dist&&!isGKRow(x)&&!isRTPSession(x));
+      let d=(inf.data||[]).filter(x=>x.dist&&!isGKRow(x)&&!isNoAvgSession(x));
       if(lf==='full')d=d.filter(x=>getMins(x)>=60);
       else if(lf==='under')d=d.filter(x=>{const m=getMins(x);return m>0&&m<60;});
       return matchAvg(d,m);
@@ -1723,7 +1725,7 @@ function renderTeamPerDay(){
   const byPlayerDate={};
   eligible.forEach(p=>{
     const byDate={};
-    (GPS[p]||[]).forEach(s=>{if(s.dist&&s.date&&inSeason(s.date,seasonF)&&!(aggF==='avg'&&isRTPSession(s))){const nd=dayKey(parseDate(s.date));(byDate[nd]=byDate[nd]||[]).push(s);}});
+    (GPS[p]||[]).forEach(s=>{if(s.dist&&s.date&&inSeason(s.date,seasonF)&&!(aggF==='avg'&&isNoAvgSession(s))){const nd=dayKey(parseDate(s.date));(byDate[nd]=byDate[nd]||[]).push(s);}});
     byPlayerDate[p]={};
     Object.keys(byDate).forEach(d=>{byPlayerDate[p][d]=combineDaySessions(byDate[d]);});
   });
@@ -1768,7 +1770,7 @@ function renderTeamWeek(){
       twByPlayerDate.byPlayerDate[p]={};
       Object.keys(byDate).forEach(d=>{
         const c=combineDaySessions(byDate[d]);
-        const nonRTP=byDate[d].filter(s=>!isRTPSession(s));
+        const nonRTP=byDate[d].filter(s=>!isNoAvgSession(s));
         c.noRTP=nonRTP.length?combineDaySessions(nonRTP):null;
         twByPlayerDate.byPlayerDate[p][d]=c;
         twByPlayerDate.seen.add(`${+dateToSeason(d).slice(0,4)}-W${String(c.week).padStart(2,'0')}`);
@@ -1957,7 +1959,7 @@ function lmPlayerDays(p){
     const part=ss.some(s=>String(s.participation||'').trim()==='Full')?'Full':(String(ss[0].participation||'').trim()||null);
     // base = the day's load without RTP sessions, used when this day feeds
     // another day's 28-day / MD+/- average.
-    const nonRTP=ss.filter(s=>!isRTPSession(s));
+    const nonRTP=ss.filter(s=>!isNoAvgSession(s));
     const basePart=nonRTP.some(s=>String(s.participation||'').trim()==='Full')?'Full':null;
     return{key,date:ss[0].date,md:md?String(md).trim():null,part,basePart,load:combineDaySessions(ss),base:nonRTP.length?combineDaySessions(nonRTP):null};
   });
@@ -2134,7 +2136,7 @@ function renderPlayerCompare(){
   const groupByDate=selDates.length>1;
   const avgOf=sessions=>{const avgs={};METRICS.forEach(k=>{const v=sessions.map(s=>s[k]).filter(x=>x!=null&&!isNaN(x));avgs[k]=v.length?+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):null;});return avgs;};
   const playerData=selected.map((player,pi)=>{
-    let sessions=(GPS[player]||[]).filter(s=>s.dist&&!isRTPSession(s)).sort((a,b)=>parseDate(a.date)-parseDate(b.date));
+    let sessions=(GPS[player]||[]).filter(s=>s.dist&&!isNoAvgSession(s)).sort((a,b)=>parseDate(a.date)-parseDate(b.date));
     if(mdF!=='all')sessions=sessions.filter(s=>String(s.md||'').trim()===mdF);
     if(selDates.length)sessions=sessions.filter(s=>selDates.includes(s.date));
     const base={player,color:PCOLORS[pi%PCOLORS.length],avgs:avgOf(sessions),count:sessions.length};
@@ -2352,7 +2354,7 @@ function pcsGetValues(player,metricVal,seasonF,sessionF,dateFrom,dateTo){
   const dfrom=dateFrom?new Date(dateFrom):null;
   const dto=dateTo?(()=>{const d=new Date(dateTo);d.setHours(23,59,59);return d;})():null;
   function fs(arr){let a=[...arr];if(seasonF&&seasonF!=='all')a=a.filter(r=>inSeason(r.date,seasonF));if(dfrom)a=a.filter(r=>parseDate(r.date)>=dfrom);if(dto)a=a.filter(r=>parseDate(r.date)<=dto);if(sessionF==='latest')a=a.length?[a[a.length-1]]:[];return a;}
-  if(src==='gps'){return fs((pcsLookup(GPS,player)||[]).filter(s=>s.dist&&s[f]!=null&&!isRTPSession(s))).map(s=>({v:s[f],date:s.date}));}
+  if(src==='gps'){return fs((pcsLookup(GPS,player)||[]).filter(s=>s.dist&&s[f]!=null&&!isNoAvgSession(s))).map(s=>({v:s[f],date:s.date}));}
   if(src==='cmj'){return fs((pcsLookup(CMJ,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
   if(src==='dj'){return fs((pcsLookup(DJ,player)||[]).filter(r=>r[f]!=null)).map(r=>({v:r[f],date:r.date}));}
   if(src==='nb'){return fs(pcsLookup(NB,player)||[]).map(r=>{const v=f==='bilateral'?+((r.lMax||0)+(r.rMax||0)).toFixed(1)/2:r[f];return v!=null?{v,date:r.date}:null;}).filter(Boolean);}
@@ -2693,9 +2695,9 @@ function renderMdpm(){
   const seasonF=document.getElementById('mdpm-season')?.value||'all';
   let sessions;
   if(player==='__group__'){
-    sessions=PLAYERS.filter(p=>AM[p]===ageF&&PM[p]!=='GK').flatMap(p=>(GPS[p]||[]).filter(s=>s.dist&&s.md&&!isRTPSession(s)&&inSeason(s.date,seasonF)));
+    sessions=PLAYERS.filter(p=>AM[p]===ageF&&PM[p]!=='GK').flatMap(p=>(GPS[p]||[]).filter(s=>s.dist&&s.md&&!isNoAvgSession(s)&&inSeason(s.date,seasonF)));
   } else {
-    sessions=(GPS[player]||[]).filter(s=>s.dist&&s.md&&!isRTPSession(s)&&inSeason(s.date,seasonF));
+    sessions=(GPS[player]||[]).filter(s=>s.dist&&s.md&&!isNoAvgSession(s)&&inSeason(s.date,seasonF));
   }
   const mdGroups={};
   MD_DAYS.forEach(d=>mdGroups[d]=[]);

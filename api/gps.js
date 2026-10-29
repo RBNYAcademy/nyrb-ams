@@ -112,8 +112,9 @@ module.exports = async (req, res) => {
       if (!dailyPlayerRows[d].players[player]) dailyPlayerRows[d].players[player] = [];
       dailyPlayerRows[d].players[player].push({
         dist,
-        // RTP can be marked in either Session Type or the MD (-) column.
-        rtp:    [r['Session Type'], r['MD (-)']].some(v => String(v || '').trim().toLowerCase() === 'rtp'),
+        // RTP and INT (international duty) are left out of the averages; either
+        // can be marked in Session Type or the MD (-) column.
+        rtp:    [r['Session Type'], r['MD (-)']].some(v => ['rtp', 'int', 'int camp', 'international'].includes(String(v || '').trim().toLowerCase())),
         dpm:    toNum(r['Distance / min (m)']),
         hsr:    toNum(r['Distance (HSR) (m)']),
         vhsr:   toNum(r['Distance (VHSR) (m)']),
@@ -133,7 +134,7 @@ module.exports = async (req, res) => {
       METRIC_KEYS.forEach(k => { dailyMap[d].vals[k] = []; dailyMap[d].avgVals[k] = []; });
       Object.values(players).forEach(sessions => {
         const combined = combineSessions(sessions);
-        // RTP sessions count toward the weekly sum but not the averages.
+        // RTP and INT sessions count toward the weekly sum but not the averages.
         const nonRTP = sessions.filter(s => !s.rtp);
         const combinedNoRTP = nonRTP.length ? combineSessions(nonRTP) : null;
         METRIC_KEYS.forEach(k => {
